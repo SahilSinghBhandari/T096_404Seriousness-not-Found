@@ -1,58 +1,53 @@
 
-import { FaPhone, FaEnvelope, FaFacebook, FaPinterest, FaLinkedin, FaTwitter } from "react-icons/fa";
-import { Navbar, Nav, Container, Button, NavDropdown } from "react-bootstrap";
-import { Link } from "react-router-dom";
 
-export default function Header() {
+import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
+
+export default function PublicNavbar() {
   return (
-    <header>
-      {/* Top Bar */}
-      <div className="bg-light border-bottom py-2">
-        <Container className="d-flex justify-content-between small">
-          <div>
-            <FaPhone className="me-2" /> +1 (454) 556-5656
-            <FaEnvelope className="ms-4 me-2" /> Yourmail@gmail.com
-          </div>
-          <div>
-            <a href="#"><FaFacebook className="me-3" /></a>
-            <a href="#"><FaPinterest className="me-3" /></a>
-            <a href="#"><FaLinkedin className="me-3" /></a>
-            <a href="#"><FaTwitter /></a>
-          </div>
-        </Container>
-      </div>
+    <Navbar bg="success" variant="dark" expand="lg" fixed="top">
+      <Container>
+        {/* Logo / Brand */}
+        <Navbar.Brand href="#home" className="fw-bold">
+          Digital Pingalwara
+        </Navbar.Brand>
 
-      {/* Navbar */}
-      <Navbar expand="lg" bg="white" className="shadow-sm py-3">
-        <Container>
-          <Navbar.Brand as={Link} to="/">
-            <img src="/assets/img/logo.png" alt="Logo" height="40" className="me-2" />
-            <span className="fw-bold text-primary">Pingalwara</span>
-          </Navbar.Brand>
+        {/* Toggle for Mobile */}
+        <Navbar.Toggle aria-controls="basic-navbar-nav" />
 
-          <Navbar.Toggle aria-controls="main-navbar" />
-          <Navbar.Collapse id="main-navbar">
-            <Nav className="ms-auto fw-semibold">
-              <Nav.Link as={Link} to="/">Home</Nav.Link>
-              <Nav.Link as={Link} to="/about">About</Nav.Link>
-              
-              <NavDropdown title="Blog" id="blog-dropdown">
-                <NavDropdown.Item as={Link} to="/blog">Blog</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/single-blog">Single Blog</NavDropdown.Item>
-              </NavDropdown>
-
-              <NavDropdown title="Pages" id="pages-dropdown">
-                <NavDropdown.Item as={Link} to="/elements">Elements</NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/cause">Cause</NavDropdown.Item>
-              </NavDropdown>
-
-              <Nav.Link as={Link} to="/contact">Contact</Nav.Link>
-            </Nav>
-
-            <Button variant="primary" className="ms-3 fw-semibold">Make a Donate</Button>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-    </header>
+        {/* Nav Links */}
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="ms-auto">
+            <Nav.Link href="#home">Home</Nav.Link>
+            <Nav.Link href="#about">About</Nav.Link>
+            <Nav.Link as={NavLink} to="/urgent">Urgent Needs</Nav.Link>
+            <Nav.Link href="#impact">Impact</Nav.Link>
+            <Nav.Link href="#donate">Donate</Nav.Link>
+            <Nav.Link href="#volunteer">Volunteer</Nav.Link>
+            <Nav.Link href="#jobs">Jobs</Nav.Link>
+             <NavDropdown
+              title={
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                  alt="user"
+                  className="rounded-circle"
+                  width="32"
+                  height="32"
+                />
+              }
+              id="profile-dropdown"
+              align="end"
+            >
+              <NavDropdown.Item href="#login">Login</NavDropdown.Item>
+              <NavDropdown.Item href="#register">Register</NavDropdown.Item>
+              <NavDropdown.Divider />
+              <NavDropdown.Item href="#profile">My Profile</NavDropdown.Item>
+              <NavDropdown.Item href="#logout">Logout</NavDropdown.Item>
+            </NavDropdown>
+          </Nav>
+          
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 }
