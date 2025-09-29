@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Router, Routes } from "react-router-dom"
 import PublicPanel from "./components/Public Panel/public"
-
+import "./index.css"
 function App() {
 
   return (
