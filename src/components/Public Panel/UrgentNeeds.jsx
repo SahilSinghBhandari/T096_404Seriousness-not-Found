@@ -1,5 +1,6 @@
 
 import { Card, ProgressBar, Button, Row, Col, Container } from "react-bootstrap";
+import { urgentNeeds } from "./components/Public Panel/urgentNeedsData";
 
 export default function UrgentNeeds() {
   return (
