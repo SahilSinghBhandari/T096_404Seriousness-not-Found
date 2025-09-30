@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
 import ReactModal from "react-modal";
+import { Link } from "react-router-dom";
 
 // Modal Styles
 const customStyles = {
@@ -23,7 +24,21 @@ export default function AppNavbar() {
   function closeModal() {
     setIsOpen(false);
   }
-
+   const signInGoogle=()=>
+    {
+      let provider=new GoogleAuthProvider()
+      signInWithPopup(auth , provider)
+      .then((userCred)=>
+      {
+        console.log(userCred.user.uid)
+        toast.success("Login Successfully")
+        nav("/")
+      })
+      .catch((error)=>
+      {
+        toast.error(error.message)
+      })
+    }
   return (
     <>
       {/* ✅ Navbar */}
@@ -79,8 +94,9 @@ export default function AppNavbar() {
           <input type="text" className="form-control" /><br/>
           <label>Password</label>
           <input type="password" className="form-control" />
-          <button type="submit" className="btn btn-primary my-2 mx-5">Login</button>
-          
+          <button type="submit" className="btn btn-primary my-2">Login</button><br/>
+          <button onClick={signInGoogle} className="btn btn-danger"><i class="bi bi-google">Sign With Google</i></button>
+          <div>Don't Have Any Account?<Link to={"/register"}>Register Here </Link></div>
         </form>
       </ReactModal>
     </>
