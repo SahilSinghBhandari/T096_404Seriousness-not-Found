@@ -95,7 +95,7 @@ export default function AppNavbar() {
           <label>Password</label>
           <input type="password" className="form-control" />
           <button type="submit" className="btn btn-primary my-2">Login</button><br/>
-          <button onClick={signInGoogle} className="btn btn-danger"><i class="bi bi-google">Sign With Google</i></button>
+          <button onClick={signInGoogle} className="btn btn-danger"><i class="bi bi-google"></i>Sign With Google</button>
           <div>Don't Have Any Account?<Link to={"/register"}>Register Here </Link></div>
         </form>
       </ReactModal>
