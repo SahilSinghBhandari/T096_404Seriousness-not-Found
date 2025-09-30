@@ -1,7 +1,8 @@
 import { BrowserRouter, Route, Router, Routes } from "react-router-dom"
-import About from "./components/Public Panel/about"
 import Layout from "./components/layouts/Layout"
 import Login from "./components/auth/login"
+import Register from "./components/auth/Register"
+import About from "./components/Public Panel/About"
 function App() {
 
   return (
@@ -11,6 +12,7 @@ function App() {
         <Route path="" element={<Layout/>}>
         <Route path="/about" element={<About/>}/>
         <Route path="/login" element={<Login/>}/>
+        <Route path="/register" element={<Register/>}/>
         {/* <Route path="/urgent" element={<UrgentNeeds/>}/> */}
         </Route>
       </Routes>
