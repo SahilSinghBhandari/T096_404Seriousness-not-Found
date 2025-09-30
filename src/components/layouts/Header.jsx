@@ -74,11 +74,13 @@ export default function AppNavbar() {
         contentLabel="Login Modal"
       >
         <h2>Login</h2>
-        <button onClick={closeModal}>Close</button>
         <form>
-          <input placeholder="Email" />
-          <input type="password" placeholder="Password" />
-          <button type="submit">Login</button>
+          <label>Email</label>
+          <input type="text" className="form-control" /><br/>
+          <label>Password</label>
+          <input type="password" className="form-control" />
+          <button type="submit" className="btn btn-primary my-2 mx-5">Login</button>
+          
         </form>
       </ReactModal>
     </>
