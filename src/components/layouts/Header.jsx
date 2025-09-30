@@ -1,53 +1,86 @@
+import { useState } from "react";
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
+import ReactModal from "react-modal";
 
+// Modal Styles
+const customStyles = {
+  content: {
+    top: "50%",
+    left: "50%",
+    right: "auto",
+    bottom: "auto",
+    marginRight: "-50%",
+    transform: "translate(-50%, -50%)",
+  },
+};
 
-import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
-import { NavLink } from "react-router-dom";
+export default function AppNavbar() {
+  const [modalIsOpen, setIsOpen] = useState(false);
 
-export default function PublicNavbar() {
+  function openModal() {
+    setIsOpen(true);
+  }
+  function closeModal() {
+    setIsOpen(false);
+  }
+
   return (
-    <Navbar bg="success" variant="dark" expand="lg" fixed="top">
-      <Container>
-        {/* Logo / Brand */}
-        <Navbar.Brand href="#home" className="fw-bold">
-          Digital Pingalwara
-        </Navbar.Brand>
+    <>
+      {/* ✅ Navbar */}
+      <Navbar bg="success" variant="dark" expand="lg">
+        <Container>
+          <Navbar.Brand href="/">Digital Pingalwara</Navbar.Brand>
+          <Navbar.Toggle aria-controls="basic-navbar-nav" />
+          <Navbar.Collapse id="basic-navbar-nav">
+            <Nav className="ms-auto">
+              <Nav.Link href="/">Home</Nav.Link>
+              <Nav.Link href="/about">About</Nav.Link>
+              <Nav.Link href="/urgent">Urgent Needs</Nav.Link>
+              <Nav.Link href="/impact">Impact</Nav.Link>
+              <Nav.Link href="/donate">Donate</Nav.Link>
+              <Nav.Link href="/volunteer">Volunteer</Nav.Link>
+              <Nav.Link href="/jobs">Jobs</Nav.Link>
 
-        {/* Toggle for Mobile */}
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
+              {/* ✅ Profile Icon Dropdown */}
+              <NavDropdown
+                title={
+                  <img
+                    src="https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                    alt="profile"
+                    width="30"
+                    height="30"
+                    style={{ borderRadius: "50%" }}
+                  />
+                }
+                id="profile-dropdown"
+                align="end"
+              >
+                <NavDropdown.Item onClick={openModal}>Login</NavDropdown.Item>
+                <NavDropdown.Item>Register</NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item>My Profile</NavDropdown.Item>
+                <NavDropdown.Item>Logout</NavDropdown.Item>
+              </NavDropdown>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
 
-        {/* Nav Links */}
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="ms-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#about">About</Nav.Link>
-            <Nav.Link as={NavLink} to="/urgent">Urgent Needs</Nav.Link>
-            <Nav.Link href="#impact">Impact</Nav.Link>
-            <Nav.Link href="#donate">Donate</Nav.Link>
-            <Nav.Link href="#volunteer">Volunteer</Nav.Link>
-            <Nav.Link href="#jobs">Jobs</Nav.Link>
-             <NavDropdown
-              title={
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                  alt="user"
-                  className="rounded-circle"
-                  width="32"
-                  height="32"
-                />
-              }
-              id="profile-dropdown"
-              align="end"
-            >
-              <NavDropdown.Item href="#login">Login</NavDropdown.Item>
-              <NavDropdown.Item href="#register">Register</NavDropdown.Item>
-              <NavDropdown.Divider />
-              <NavDropdown.Item href="#profile">My Profile</NavDropdown.Item>
-              <NavDropdown.Item href="#logout">Logout</NavDropdown.Item>
-            </NavDropdown>
-          </Nav>
-          
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+      {/* ✅ Login Modal */}
+      <ReactModal
+        isOpen={modalIsOpen}
+        onRequestClose={closeModal}
+        style={customStyles}
+        contentLabel="Login Modal"
+      >
+        <h2>Login</h2>
+        <button onClick={closeModal}>Close</button>
+        <form>
+          <input placeholder="Email" />
+          <input type="password" placeholder="Password" />
+          <button type="submit">Login</button>
+        </form>
+      </ReactModal>
+    </>
   );
 }
