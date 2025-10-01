@@ -1,80 +1,67 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Form, Button, Container, Row, Col, Card } from "react-bootstrap";
+import { Form, Button, Container, Row, Col, Card, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function Register() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false); // ✅ loader state
   const nav = useNavigate();
 
-  // ✅ Handle Input Change
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  // ✅ Handle Register
+  // ✅ Register with Email + Password
   const handleRegister = async (e) => {
     e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match!");
-      return;
-    }
-
+    setLoading(true); // start loader
     try {
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
-      );
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCred.user;
 
-      // Update display name
-      await updateProfile(userCred.user, {
-        displayName: formData.fullName,
-      });
-
-      // Save user in Firestore
-      await setDoc(doc(db, "users", userCred.user.uid), {
-        fullName: formData.fullName,
-        email: formData.email,
+      // Save user to Firestore "users" collection
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: name,
+        email: user.email,
         createdAt: new Date(),
       });
 
-      toast.success("Registered Successfully 🎉");
+      toast.success("User Registered Successfully 🎉");
       nav("/");
-    } catch (err) {
-      toast.error(err.message);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false); // stop loader
     }
   };
 
-  // ✅ Google Sign-up
-  const signUpGoogle = async () => {
+  // ✅ Google Register/Login
+  const signInGoogle = async () => {
+    setLoading(true); // start loader
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast.success("Google Sign-up Successful ✅");
+      let provider = new GoogleAuthProvider();
+      const userCred = await signInWithPopup(auth, provider);
+      const user = userCred.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: user.displayName,
+        email: user.email,
+        photo: user.photoURL,
+        createdAt: new Date(),
+      });
+
+      toast.success("Google Sign-in Successful 🎉");
       nav("/");
-    } catch (err) {
-      toast.error(err.message);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false); // stop loader
     }
   };
 
@@ -85,7 +72,7 @@ export default function Register() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f5f7fa", // light professional background
+        backgroundColor: "#f5f7fa",
         padding: "20px",
       }}
     >
@@ -99,122 +86,99 @@ export default function Register() {
             >
               <Card className="shadow-lg rounded-4 overflow-hidden border-0">
                 <Row className="g-0">
-                  {/* ✅ Left Animation Section */}
-                  <Col
-                    md={6}
-                    className="d-flex align-items-center justify-content-center bg-light"
-                  >
-                    <DotLottieReact
-                      src="https://lottie.host/57b33191-0972-46ad-83a9-72b1ed82157f/Qj79kTJOPn.lottie"
-                      loop
-                      autoplay
-                      style={{ width: "90%", maxWidth: "350px" }}
-                    />
-                  </Col>
-
-                  {/* ✅ Right Form Section */}
+                  {/* ✅ Left Form Section */}
                   <Col md={6} className="p-4">
                     <motion.h3
                       className="text-center mb-4"
                       style={{ color: "#1e3c72", fontWeight: "bold" }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
                     >
-                      Create Account
+                      Register
                     </motion.h3>
 
                     <Form onSubmit={handleRegister}>
-                      {/* Full Name */}
+                      {/* Name */}
                       <Form.Group className="mb-3">
-                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                          Full Name
-                        </Form.Label>
+                        <Form.Label>Name</Form.Label>
                         <Form.Control
                           type="text"
-                          name="fullName"
-                          placeholder="Enter full name"
-                          value={formData.fullName}
-                          onChange={handleChange}
+                          placeholder="Enter name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           required
                         />
                       </Form.Group>
 
                       {/* Email */}
                       <Form.Group className="mb-3">
-                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                          Email Address
-                        </Form.Label>
+                        <Form.Label>Email</Form.Label>
                         <Form.Control
                           type="email"
-                          name="email"
                           placeholder="Enter email"
-                          value={formData.email}
-                          onChange={handleChange}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                         />
                       </Form.Group>
 
                       {/* Password */}
                       <Form.Group className="mb-3">
-                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                          Password
-                        </Form.Label>
+                        <Form.Label>Password</Form.Label>
                         <Form.Control
                           type="password"
-                          name="password"
                           placeholder="Enter password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          required
-                        />
-                      </Form.Group>
-
-                      {/* Confirm Password */}
-                      <Form.Group className="mb-3">
-                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                          Confirm Password
-                        </Form.Label>
-                        <Form.Control
-                          type="password"
-                          name="confirmPassword"
-                          placeholder="Confirm password"
-                          value={formData.confirmPassword}
-                          onChange={handleChange}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
                           required
                         />
                       </Form.Group>
 
                       {/* Register Button */}
-                      <div className="d-grid">
-                        <Button
-                          variant="primary"
-                          type="submit"
-                          style={{
-                            backgroundColor: "#1e3c72",
-                            border: "none",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Register
-                        </Button>
-                      </div>
+                      <Button
+                        variant="primary"
+                        type="submit"
+                        className="w-100"
+                        style={{ backgroundColor: "#1e3c72", border: "none" }}
+                        disabled={loading} // ✅ disable when loading
+                      >
+                        {loading ? (
+                          <>
+                            <Spinner
+                              as="span"
+                              animation="border"
+                              size="sm"
+                              role="status"
+                              aria-hidden="true"
+                            />{" "}
+                            Registering...
+                          </>
+                        ) : (
+                          "Register"
+                        )}
+                      </Button>
 
-                      {/* Google Sign Up */}
-                      <div className="d-grid mt-3">
-                        <Button
-                          variant="outline-primary"
-                          onClick={signUpGoogle}
-                          style={{
-                            border: "2px solid #1e3c72",
-                            color: "#1e3c72",
-                            fontWeight: "600",
-                          }}
-                        >
-                          Sign up with Google
-                        </Button>
-                      </div>
+                      {/* Google Sign In */}
+                      <Button
+                        variant="outline-danger"
+                        className="w-100 mt-3"
+                        onClick={signInGoogle}
+                        disabled={loading} // ✅ disable during loading
+                      >
+                        {loading ? "Please wait..." : "Sign up with Google"}
+                      </Button>
                     </Form>
+                  </Col>
+
+                  {/* ✅ Right Animation Section */}
+                  <Col
+                    md={6}
+                    className="d-flex align-items-center justify-content-center bg-light"
+                  >
+                    <DotLottieReact
+                      src="https://lottie.host/4ac3e52c-4d07-4f3c-b2e4-c39df5efefcf/y3RQY9gctT.lottie"
+                      loop
+                      autoplay
+                      style={{ width: "90%", maxWidth: "350px" }}
+                    />
                   </Col>
                 </Row>
               </Card>

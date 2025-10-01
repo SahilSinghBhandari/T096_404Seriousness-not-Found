@@ -39,7 +39,6 @@ export default function About() {
           </Row>
         </Container>
       </section>
-
       {/* Activities Section */}
       <section className="bg-light py-5">
         <Container>
@@ -126,31 +125,7 @@ export default function About() {
       </section>
 
       {/* Donation Form */}
-      <section className="bg-light py-5">
-        <Container>
-          <Row className="justify-content-center mb-4">
-            <Col lg={6} className="text-center">
-              <h3>Make a Donation</h3>
-            </Col>
-          </Row>
-          <Row className="justify-content-center">
-            <Col lg={6}>
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Donation Amount</Form.Label>
-                  <Form.Control type="number" placeholder="Enter amount" />
-                </Form.Group>
-                <div className="d-flex gap-3 mb-3">
-                  <Form.Check type="radio" label="$10" name="donation" />
-                  <Form.Check type="radio" label="$30" name="donation" />
-                  <Form.Check type="radio" label="Other" name="donation" />
-                </div>
-                <Button variant="danger" className="w-100">Donate Now</Button>
-              </Form>
-            </Col>
-          </Row>
-        </Container>
-      </section>
+     
     </>
   );
 }
