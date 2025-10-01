@@ -1,51 +1,62 @@
 import React, { useState } from "react";
 import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
+import { db } from "../../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
-const Donation=()=> {
+const Donation = () => {
   const [amount, setAmount] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const nav = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
+  const handlePayment = () => {
     if (!amount || !name || !email) {
       alert("Please fill all required fields.");
       return;
     }
 
-    // ✅ Here you can integrate Razorpay, Stripe, or Firebase Firestore
-    setSubmitted(true);
-    setAmount("");
-    setName("");
-    setEmail("");
-  };
-   const handlePayment = (e) => {
     const options = {
-      key: "rzp_test_RO6yowrTlsHmWL", // Razorpay Key ID
-      amount: amount*100, // Amount in paisa (₹500)
+      key: "rzp_test_RO6yowrTlsHmWL", // ✅ test key
+      amount: amount * 100, // in paise
       currency: "INR",
       name: "Helping Hand",
-      description: "Product or Service",
+      description: "Donation",
       handler: async function (response) {
-        // Save payment ID to Firebase Firestore
-        const ref = doc(db, "payments", response.razorpay_payment_id);
-        await setDoc(ref, {
-          paymentId: response.razorpay_payment_id,
-          status: "success",
-          amount:amt,
-          dietId,
-          userId:sessionStorage.getItem("userId"),
-          timestamp: Date.now(),
-        });
-        toast("Payment successful!");
-        nav("/managesub")
+        try {
+          // ✅ Create new doc with paymentId
+          const ref = doc(db, "payments", response.razorpay_payment_id);
+          await setDoc(ref, {
+            paymentId: response.razorpay_payment_id,
+            status: "success",
+            donorName: name,
+            donorEmail: email,
+            message: message,
+            amount: amount,
+            timestamp: new Date(),
+          });
+
+          toast.success("🎉 Payment successful!");
+          setSubmitted(true);
+
+          // Clear form
+          setAmount("");
+          setName("");
+          setEmail("");
+          setMessage("");
+
+          nav("/thankyou"); // redirect if needed
+        } catch (error) {
+          console.error("Error saving payment:", error);
+          toast.error("Error saving payment. Please try again.");
+        }
       },
       prefill: {
-        name: "Test User",
-        email: "test@example.com",
+        name: name,
+        email: email,
         contact: "9999999999",
       },
       theme: {
@@ -56,15 +67,14 @@ const Donation=()=> {
     const rzp = new window.Razorpay(options);
     rzp.open();
   };
-  
+
   return (
     <Container className="py-5">
       <Row className="justify-content-center text-center mb-5">
         <Col md={8}>
           <h1 className="text-success fw-bold">Make a Difference Today 💚</h1>
           <p className="text-muted">
-            Your donation helps us provide education, healthcare, and shelter to
-            those in need. Every contribution counts!
+            Your donation helps us provide education, healthcare, and shelter to those in need.
           </p>
         </Col>
       </Row>
@@ -76,16 +86,12 @@ const Donation=()=> {
               <h3 className="text-center text-success mb-4">Donate Now</h3>
 
               {submitted && (
-                <Alert
-                  variant="success"
-                  onClose={() => setSubmitted(false)}
-                  dismissible
-                >
+                <Alert variant="success" dismissible onClose={() => setSubmitted(false)}>
                   🎉 Thank you for your generous donation, {name}!
                 </Alert>
               )}
 
-              <Form onSubmit={handleSubmit}>
+              <Form>
                 <Form.Group className="mb-3">
                   <Form.Label>Full Name *</Form.Label>
                   <Form.Control
@@ -93,7 +99,6 @@ const Donation=()=> {
                     placeholder="Enter your name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    required
                   />
                 </Form.Group>
 
@@ -104,7 +109,6 @@ const Donation=()=> {
                     placeholder="Enter your email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
                   />
                 </Form.Group>
 
@@ -115,7 +119,6 @@ const Donation=()=> {
                     placeholder="Enter amount"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    required
                   />
                 </Form.Group>
 
@@ -131,7 +134,7 @@ const Donation=()=> {
                 </Form.Group>
 
                 <div className="d-grid">
-                  <Button type="submit" variant="success" size="lg" onClick={handlePayment}>
+                  <Button variant="success" size="lg" onClick={handlePayment}>
                     Donate Now 💝
                   </Button>
                 </div>
@@ -140,17 +143,8 @@ const Donation=()=> {
           </Card>
         </Col>
       </Row>
-
-      <Row className="text-center mt-5">
-        <Col>
-          <h4 className="fw-bold text-success">Your Support Matters 🌱</h4>
-          <p className="text-muted">
-            100% of your donation goes directly towards helping those in need.
-          </p>
-        </Col>
-      </Row>
     </Container>
   );
 };
 
-export default Donation;
+export default Donation;
