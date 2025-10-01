@@ -4,22 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 export default function Header() {
-  const nav = useNavigate();
-
-  // ✅ Google Sign-in
-  const signInGoogle = () => {
-    let provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider)
-      .then((userCred) => {
-        console.log(userCred.user.uid);
-        toast.success("Login Successfully");
-        nav("/");
-      })
-      .catch((error) => {
-        toast.error(error.message);
-      });
-  };
-
+  
   return (
     <>
       {/* ✅ Navbar */}
