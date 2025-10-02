@@ -7,6 +7,7 @@ import Donation from "./components/Public Panel/Doantion"
 import UrgentNeeds from "./components/Public Panel/UrgentNeeds"
 import ThankYou from "./components/Public Panel/Thankyou"
 import Volunter from "./components/Public Panel/Volunter"
+import Medical from "./components/Public Panel/Medical"
 function App() {
 
   return (
@@ -18,9 +19,10 @@ function App() {
         <Route path="/login" element={<Login/>}/>
         <Route path="/register" element={<Register/>}/>
         <Route path="/donate" element={<Donation/>}/>
-        <Route path="/urgent" element={<UrgentNeeds/>}/>
+        {/* <Route path="/urgent" element={<UrgentNeeds/>}/> */}
         <Route path="/thankyou" element={<ThankYou/>}/>
         <Route path="/volunteer" element={<Volunter/>}/>
+        <Route path="/medical" element={<Medical/>}/>
         </Route>
       </Routes>
      </BrowserRouter>
