@@ -8,6 +8,7 @@ import UrgentNeeds from "./components/Public Panel/UrgentNeeds"
 import ThankYou from "./components/Public Panel/Thankyou"
 import Volunter from "./components/Public Panel/Volunter"
 import Medical from "./components/Public Panel/Medical"
+import Dashboard from "./components/admin/Dashboard"
 function App() {
 
   return (
@@ -23,6 +24,11 @@ function App() {
         <Route path="/thankyou" element={<ThankYou/>}/>
         <Route path="/volunteer" element={<Volunter/>}/>
         <Route path="/medical" element={<Medical/>}/>
+        </Route>
+
+        {/* amin routes*/}
+        <Route path="/admin" element={<Dashboard/>}>
+
         </Route>
       </Routes>
      </BrowserRouter>

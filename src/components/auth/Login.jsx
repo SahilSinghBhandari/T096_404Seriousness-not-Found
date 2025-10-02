@@ -3,8 +3,13 @@ import { motion } from "framer-motion";
 import { Form, Button, Container, Row, Col, Card } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../../firebase";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import { auth, db } from "../../firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-toastify";
 
 export default function Login() {
@@ -12,25 +17,73 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const nav = useNavigate();
 
+  // ✅ Check if user is Admin
+  const isAdmin = (userEmail) => {
+    return userEmail?.toLowerCase() === "sahil@gmail.com"; // admin email
+  };
+
   // ✅ Handle Login (email + password)
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Email:", email, "Password:", password);
-    // Add Firebase login logic here if needed
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+      // ✅ Save/update user login info in Firestore
+      await setDoc(
+        doc(db, "users", userCred.user.uid),
+        {
+          uid: userCred.user.uid,
+          email: userCred.user.email,
+          lastLogin: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      toast.success("✅ Login Successful!");
+
+      // ✅ Redirect based on role
+      if (isAdmin(userCred.user.email)) {
+        nav("/admin"); // redirect admin
+      } else {
+        nav("/"); // redirect normal user
+      }
+    } catch (error) {
+      console.error("Login Error:", error);
+      toast.error(error.message || "Login failed");
+    }
   };
 
   // ✅ Google Sign-in
-  const signInGoogle = () => {
-    let provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider)
-      .then((userCred) => {
-        console.log(userCred.user.uid);
-        toast.success("Login Successfully");
+  const signInGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCred = await signInWithPopup(auth, provider);
+
+      // ✅ Save/update user info in Firestore
+      await setDoc(
+        doc(db, "users", userCred.user.uid),
+        {
+          uid: userCred.user.uid,
+          email: userCred.user.email,
+          name: userCred.user.displayName || "",
+          photoURL: userCred.user.photoURL || "",
+          lastLogin: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      toast.success("✅ Logged in with Google!");
+
+      // ✅ Redirect based on role
+      if (isAdmin(userCred.user.email)) {
+        nav("/admin");
+      } else {
         nav("/");
-      })
-      .catch((error) => {
-        toast.error(error.message);
-      });
+      }
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      toast.error(error.message || "Google login failed");
+    }
   };
 
   return (
@@ -40,7 +93,7 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f5f7fa", // professional background
+        backgroundColor: "#f5f7fa",
         padding: "20px",
       }}
     >

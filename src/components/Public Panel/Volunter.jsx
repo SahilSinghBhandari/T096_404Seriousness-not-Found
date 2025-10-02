@@ -3,7 +3,11 @@ import { Container, Row, Col, Card, Form, Button, Modal } from "react-bootstrap"
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 
-const Volunter= () => {
+// Firebase Firestore
+import { db } from "../../firebase"; 
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+
+const Volunter = () => {
   const [image, setImage] = useState(null);
   const [showOptions, setShowOptions] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -20,25 +24,19 @@ const Volunter= () => {
 
   // ✅ Capture photo from webcam
   const capture = () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    setImage(dataURLtoFile(imageSrc, "webcam.jpg"));
+    const imageSrc = webcamRef.current.getScreenshot(); // Base64 image
+    setImage(imageSrc);
     setShowCamera(false);
-  };
-
-  // ✅ Convert base64 → File
-  const dataURLtoFile = (dataurl, filename) => {
-    let arr = dataurl.split(",");
-    let mime = arr[0].match(/:(.*?);/)[1];
-    let bstr = atob(arr[1]);
-    let n = bstr.length;
-    let u8arr = new Uint8Array(n);
-    while (n--) u8arr[n] = bstr.charCodeAt(n);
-    return new File([u8arr], filename, { type: mime });
   };
 
   // ✅ Handle gallery upload
   const handleGallery = (e) => {
-    setImage(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImage(reader.result); // base64 string
+      reader.readAsDataURL(file);
+    }
     setShowOptions(false);
   };
 
@@ -59,35 +57,44 @@ const Volunter= () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
-  // ✅ Submit form (Image required check)
-  const handleSubmit = (e) => {
+  // ✅ Submit form (store in Firestore with Base64 image)
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.phone || !formData.availability) {
-      alert("⚠️ Please fill all required fields.");
+      toast.warn("⚠️ Please fill all required fields.");
       return;
     }
 
     if (!image) {
-      toast.error("⚠️ Please upload or capture your photo before submitting.");
+      toast.warn("⚠️ Please upload or capture your photo before submitting.");
       return;
     }
 
-    console.log("Volunteer Data:", {
-      ...formData,
-      image,
-    });
+    try {
+      await addDoc(collection(db, "volunteers"), {
+        ...formData,
+        image, // base64 string stored directly
+        createdAt: serverTimestamp(),
+      });
 
-    alert("🎉 Thank you for registering as a volunteer!");
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      message: "",
-      availability: "",
-      interests: [],
-    });
-    setImage(null);
+      toast.success("🎉 Volunteer registered successfully!");
+
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        message: "",
+        availability: "",
+        interests: [],
+      });
+      setImage(null);
+
+    } catch (error) {
+      console.error("Error saving volunteer:", error);
+      toast.error("❌ Something went wrong, please try again.");
+    }
   };
 
   return (
@@ -115,7 +122,7 @@ const Volunter= () => {
               >
                 {image ? (
                   <img
-                    src={URL.createObjectURL(image)}
+                    src={image}
                     alt="profile"
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   />
@@ -262,12 +269,7 @@ const Volunter= () => {
 
           <label className="btn btn-success m-2">
             Select from Gallery 🖼
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={handleGallery}
-            />
+            <input type="file" accept="image/*" hidden onChange={handleGallery} />
           </label>
         </Modal.Body>
       </Modal>

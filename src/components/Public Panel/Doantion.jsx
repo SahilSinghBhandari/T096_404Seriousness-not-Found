@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
 import { db } from "../../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  addDoc,
+  collection,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 
@@ -11,61 +17,87 @@ const Donation = () => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const [state, setState] = useState("");
+  const [city, setCity] = useState("");
+
   const nav = useNavigate();
 
-  const handlePayment = () => {
-    if (!amount || !name || !email) {
+  const handlePayment = async () => {
+    if (!amount || !name || !email || !message) {
       alert("Please fill all required fields.");
       return;
     }
 
+    let createdDocRef = null;
+    try {
+      const paymentsCol = collection(db, "payments");
+      const initDoc = await addDoc(paymentsCol, {
+        status: "initiated",
+        donorName: name,
+        donorEmail: email,
+        donorState: state || "",
+        donorCity: city || "",
+        amount: Number(amount),
+        message: message,
+        createdAt: serverTimestamp(),
+      });
+      createdDocRef = initDoc;
+    } catch (err) {
+      console.error("Error creating initial payment doc:", err);
+      toast.error("Could not initialize payment. Try again.");
+      return;
+    }
+
+    const docId = createdDocRef.id;
+
     const options = {
-      key: "rzp_test_RO6yowrTlsHmWL", // ✅ test key
-      amount: amount * 100, // in paise
+      key: "rzp_test_RO6yowrTlsHmWL", // 🔑 test key
+      amount: Number(amount) * 100,
       currency: "INR",
       name: "Helping Hand",
       description: "Donation",
+      prefill: { name, email, contact: "9999999999" },
+      theme: { color: "#0066cc" },
+
       handler: async function (response) {
         try {
-          // ✅ Create new doc with paymentId
-          const ref = doc(db, "payments", response.razorpay_payment_id);
-          await setDoc(ref, {
-            paymentId: response.razorpay_payment_id,
+          const paymentId = response?.razorpay_payment_id || "";
+
+          const paymentDocRef = doc(db, "payments", docId);
+          await updateDoc(paymentDocRef, {
             status: "success",
-            donorName: name,
-            donorEmail: email,
-            message: message,
-            amount: amount,
-            timestamp: new Date(),
+            paymentId,
+            updatedAt: serverTimestamp(),
+            completedAt: new Date().toISOString(),
           });
 
           toast.success("🎉 Payment successful!");
           setSubmitted(true);
 
-          // Clear form
+          // ✅ Clear form after update
           setAmount("");
           setName("");
           setEmail("");
           setMessage("");
+          setState("");
+          setCity("");
 
-          nav("/thankyou"); // redirect if needed
-        } catch (error) {
-          console.error("Error saving payment:", error);
-          toast.error("Error saving payment. Please try again.");
+          nav("/thankyou");
+        } catch (err) {
+          console.error("Error in payment handler:", err);
+          toast.error("Payment succeeded, but saving failed.");
         }
-      },
-      prefill: {
-        name: name,
-        email: email,
-        contact: "9999999999",
-      },
-      theme: {
-        color: "#0066cc",
       },
     };
 
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Razorpay open error:", err);
+      toast.error("Unable to open payment checkout.");
+    }
   };
 
   return (
@@ -86,7 +118,11 @@ const Donation = () => {
               <h3 className="text-center text-success mb-4">Donate Now</h3>
 
               {submitted && (
-                <Alert variant="success" dismissible onClose={() => setSubmitted(false)}>
+                <Alert
+                  variant="success"
+                  dismissible
+                  onClose={() => setSubmitted(false)}
+                >
                   🎉 Thank you for your generous donation, {name}!
                 </Alert>
               )}
@@ -112,6 +148,32 @@ const Donation = () => {
                   />
                 </Form.Group>
 
+                {/* State + City on same row */}
+                <Row>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>State</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter your state"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col>
+                    <Form.Group className="mb-3">
+                      <Form.Label>City</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter your city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+
                 <Form.Group className="mb-3">
                   <Form.Label>Donation Amount (₹) *</Form.Label>
                   <Form.Control
@@ -123,13 +185,14 @@ const Donation = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Message (Optional)</Form.Label>
+                  <Form.Label>Message *</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
                     placeholder="Write a message..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    required
                   />
                 </Form.Group>
 

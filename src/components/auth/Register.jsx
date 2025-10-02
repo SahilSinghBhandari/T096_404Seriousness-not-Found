@@ -6,62 +6,72 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { toast } from "react-toastify";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false); // ✅ loader state
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
 
   // ✅ Register with Email + Password
   const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true); // start loader
+    setLoading(true);
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
 
       // Save user to Firestore "users" collection
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: name,
-        email: user.email,
-        createdAt: new Date(),
-      });
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          name: name,
+          email: user.email,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true } // ✅ avoid overwriting if user already exists
+      );
 
-      toast.success("User Registered Successfully 🎉");
+      toast.success("🎉 User Registered Successfully");
       nav("/");
     } catch (error) {
-      toast.error(error.message);
+      console.error("Registration Error:", error);
+      toast.error(error.message || "Registration failed");
     } finally {
-      setLoading(false); // stop loader
+      setLoading(false);
     }
   };
 
   // ✅ Google Register/Login
   const signInGoogle = async () => {
-    setLoading(true); // start loader
+    setLoading(true);
     try {
-      let provider = new GoogleAuthProvider();
+      const provider = new GoogleAuthProvider();
       const userCred = await signInWithPopup(auth, provider);
       const user = userCred.user;
 
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: user.displayName,
-        email: user.email,
-        photo: user.photoURL,
-        createdAt: new Date(),
-      });
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          uid: user.uid,
+          name: user.displayName || "",
+          email: user.email,
+          photo: user.photoURL || "",
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-      toast.success("Google Sign-in Successful 🎉");
+      toast.success("🎉 Google Sign-in Successful");
       nav("/");
     } catch (error) {
-      toast.error(error.message);
+      console.error("Google Sign-in Error:", error);
+      toast.error(error.message || "Google Sign-in failed");
     } finally {
-      setLoading(false); // stop loader
+      setLoading(false);
     }
   };
 
@@ -138,7 +148,7 @@ export default function Register() {
                         type="submit"
                         className="w-100"
                         style={{ backgroundColor: "#1e3c72", border: "none" }}
-                        disabled={loading} // ✅ disable when loading
+                        disabled={loading}
                       >
                         {loading ? (
                           <>
@@ -161,7 +171,7 @@ export default function Register() {
                         variant="outline-danger"
                         className="w-100 mt-3"
                         onClick={signInGoogle}
-                        disabled={loading} // ✅ disable during loading
+                        disabled={loading}
                       >
                         {loading ? "Please wait..." : "Sign up with Google"}
                       </Button>
