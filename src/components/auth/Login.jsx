@@ -1,7 +1,8 @@
+// // src/components/auth/Login.jsx
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Form, Button, Container, Row, Col, Card } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import {
   GoogleAuthProvider,
@@ -9,7 +10,7 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { auth, db } from "../../firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-toastify";
 
 export default function Login() {
@@ -17,39 +18,64 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const nav = useNavigate();
 
-  // ✅ Check if user is Admin
-  const isAdmin = (userEmail) => {
-    return userEmail?.toLowerCase() === "sahil@gmail.com"; // admin email
+  // ✅ Redirect based on user role
+  const redirectByRole = async (uid, email) => {
+    try {
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+
+      let role = "user";
+      if (userSnap.exists()) {
+        role = userSnap.data().role || "user";
+      }
+
+      if (role === "admin" || email?.toLowerCase() === "sahil@gmail.com") {
+        nav("/admin");
+      } else if (role === "pingalwada-admin") {
+        nav("/pingalwada-admin");
+      } else {
+        nav("/");
+      }
+    } catch (err) {
+      console.error("Role fetch error:", err);
+      nav("/");
+    }
   };
 
-  // ✅ Handle Login (email + password)
+  // ✅ Handle Login
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.warn("⚠️ Please fill in both email and password");
+      return;
+    }
+
     try {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCred.user;
 
-      // ✅ Save/update user login info in Firestore
       await setDoc(
-        doc(db, "users", userCred.user.uid),
+        doc(db, "users", user.uid),
         {
-          uid: userCred.user.uid,
-          email: userCred.user.email,
+          uid: user.uid,
+          email: user.email,
           lastLogin: serverTimestamp(),
         },
         { merge: true }
       );
 
       toast.success("✅ Login Successful!");
-
-      // ✅ Redirect based on role
-      if (isAdmin(userCred.user.email)) {
-        nav("/admin"); // redirect admin
-      } else {
-        nav("/"); // redirect normal user
-      }
+      redirectByRole(user.uid, user.email);
     } catch (error) {
-      console.error("Login Error:", error);
-      toast.error(error.message || "Login failed");
+      if (error.code === "auth/wrong-password") {
+        toast.error("❌ Incorrect password, please try again.");
+      } else if (error.code === "auth/user-not-found") {
+        toast.error("❌ No account found with this email.");
+      } else if (error.code === "auth/invalid-email") {
+        toast.error("⚠️ Please enter a valid email.");
+      } else {
+        toast.error(error.message || "Login failed");
+      }
     }
   };
 
@@ -58,30 +84,23 @@ export default function Login() {
     try {
       const provider = new GoogleAuthProvider();
       const userCred = await signInWithPopup(auth, provider);
+      const user = userCred.user;
 
-      // ✅ Save/update user info in Firestore
       await setDoc(
-        doc(db, "users", userCred.user.uid),
+        doc(db, "users", user.uid),
         {
-          uid: userCred.user.uid,
-          email: userCred.user.email,
-          name: userCred.user.displayName || "",
-          photoURL: userCred.user.photoURL || "",
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName || "",
+          photoURL: user.photoURL || "",
           lastLogin: serverTimestamp(),
         },
         { merge: true }
       );
 
       toast.success("✅ Logged in with Google!");
-
-      // ✅ Redirect based on role
-      if (isAdmin(userCred.user.email)) {
-        nav("/admin");
-      } else {
-        nav("/");
-      }
+      redirectByRole(user.uid, user.email);
     } catch (error) {
-      console.error("Google Sign-In Error:", error);
       toast.error(error.message || "Google login failed");
     }
   };
@@ -89,17 +108,18 @@ export default function Login() {
   return (
     <div
       style={{
-        height: "100vh",
+        minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f5f7fa",
+        backgroundColor: "#ffffff", // ✅ White background
         padding: "20px",
       }}
     >
       <Container>
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
+            {/* ✅ Animate the whole card only */}
             <motion.div
               initial={{ opacity: 0, y: -50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -109,64 +129,44 @@ export default function Login() {
                 <Row className="g-0">
                   {/* ✅ Left Form Section */}
                   <Col md={6} className="p-4">
-                    <motion.h3
+                    <h3
                       className="text-center mb-4"
                       style={{ color: "#1e3c72", fontWeight: "bold" }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
                     >
                       Login
-                    </motion.h3>
+                    </h3>
 
                     <Form onSubmit={handleLogin}>
                       {/* Email */}
-                      <motion.div
-                        initial={{ opacity: 0, x: -50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.6 }}
-                      >
-                        <Form.Group className="mb-3">
-                          <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                            Email Address
-                          </Form.Label>
-                          <Form.Control
-                            type="email"
-                            placeholder="Enter email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                        </Form.Group>
-                      </motion.div>
+                      <Form.Group className="mb-3">
+                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
+                          Email Address
+                        </Form.Label>
+                        <Form.Control
+                          type="email"
+                          placeholder="Enter email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
 
                       {/* Password */}
-                      <motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.8 }}
-                      >
-                        <Form.Group className="mb-3">
-                          <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
-                            Password
-                          </Form.Label>
-                          <Form.Control
-                            type="password"
-                            placeholder="Enter password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                        </Form.Group>
-                      </motion.div>
+                      <Form.Group className="mb-3">
+                        <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
+                          Password
+                        </Form.Label>
+                        <Form.Control
+                          type="password"
+                          placeholder="Enter password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                      </Form.Group>
 
                       {/* Login Button */}
-                      <motion.div
-                        className="d-grid"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 1 }}
-                      >
+                      <div className="d-grid">
                         <Button
                           variant="primary"
                           type="submit"
@@ -178,26 +178,33 @@ export default function Login() {
                         >
                           Login
                         </Button>
-                      </motion.div>
+                      </div>
 
                       {/* Google Sign In */}
-                      <motion.div
-                        className="d-grid mt-3"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 1.2 }}
-                      >
+                      <div className="d-grid mt-3">
                         <Button
-                          variant="outline-danger"
+                          variant="outline-primary"
                           onClick={signInGoogle}
                           style={{
-                            border: "2px solid #dc3545",
+                            border: "2px solid #1e3c72",
                             fontWeight: "600",
+                            color: "#1e3c72",
                           }}
                         >
                           Sign in with Google
                         </Button>
-                      </motion.div>
+                      </div>
+
+                      {/* Register Now Link */}
+                      <div className="text-center mt-3">
+                        <span style={{ color: "#555" }}>Don't have an account? </span>
+                        <Link
+                          to="/register"
+                          style={{ color: "#1e3c72", fontWeight: "bold" }}
+                        >
+                          Register Now
+                        </Link>
+                      </div>
                     </Form>
                   </Col>
 
@@ -207,7 +214,7 @@ export default function Login() {
                     className="d-flex align-items-center justify-content-center bg-light"
                   >
                     <DotLottieReact
-                      src="https://lottie.host/4ac3e52c-4d07-4f3c-b2e4-c39df5efefcf/y3RQY9gctT.lottie"
+                      src="https://lottie.host/c33ffb93-39f4-4d89-94d9-0e976378e57e/bnXRulriGi.lottie"
                       loop
                       autoplay
                       style={{ width: "90%", maxWidth: "350px" }}

@@ -1,59 +1,145 @@
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Navbar, Nav, Container, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { auth, db } from "../../firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Header() {
-  
+  const [user, setUser] = useState(null);
+  const [userName, setUserName] = useState(""); // ✅ store registered name
+  const nav = useNavigate();
+
+  // ✅ Track logged-in user
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+
+        // ✅ Fetch name from Firestore "users" collection
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUserName(userSnap.data().name || "User");
+          } else {
+            setUserName(currentUser.displayName || "User");
+          }
+        } catch (err) {
+          console.error("Error fetching user name:", err);
+          setUserName("User");
+        }
+      } else {
+        setUser(null);
+        setUserName("");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ Logout
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Logged out successfully!");
+      nav("/login");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error logging out!");
+    }
+  };
+
   return (
     <>
       {/* ✅ Navbar */}
-      <Navbar bg="success" variant="dark" expand="lg">
+      <Navbar
+        expand="lg"
+        style={{
+          background: "linear-gradient(90deg, #1e3c72, #2a5298)",
+        }}
+        variant="dark"
+        className="shadow-sm"
+      >
         <Container>
-          <Navbar.Brand as={Link} to="/">Digital Pingalwara</Navbar.Brand>
+          <Navbar.Brand as={Link} to="/" className="fw-bold fs-4 text-white">
+            Digital Pingalwara
+          </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="ms-auto">
-              {/* <Nav.Link as={Link} to="/">Home</Nav.Link> */}
-              <Nav.Link as={Link} to="/">Home</Nav.Link>
-              {/* <Nav.Link as={Link} to="/urgent">Urgent Needs</Nav.Link> */}
-              {/* <Nav.Link as={Link} to="/impact">Impact</Nav.Link> */}
-              <Nav.Link as={Link} to="/donate">Donate</Nav.Link>
-              <Nav.Link as={Link} to="/volunteer">Volunteer</Nav.Link>
-              <Nav.Link as={Link} to="/jobs">Jobs</Nav.Link>
-
-              {/* ✅ Profile Dropdown */}
-              <NavDropdown
-                title={
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/847/847969.png"
-                    alt="profile"
-                    width="30"
-                    height="30"
-                    style={{ borderRadius: "50%" }}
-                  />
-                }
-                id="profile-dropdown"
-                align="end"
+            <Nav className="ms-auto align-items-center">
+              <Nav.Link
+                as={Link}
+                to="/"
+                className="fw-semibold px-3 text-white nav-link-custom"
               >
-                <NavDropdown.Item as={Link} to="/login">
+                Home
+              </Nav.Link>
+              <Nav.Link
+                as={Link}
+                to="/donate"
+                className="fw-semibold px-3 text-white nav-link-custom"
+              >
+                Donate
+              </Nav.Link>
+              <Nav.Link
+                as={Link}
+                to="/volunteer"
+                className="fw-semibold px-3 text-white nav-link-custom"
+              >
+                Volunteer
+              </Nav.Link>
+              <Nav.Link
+                as={Link}
+                to="/jobs"
+                className="fw-semibold px-3 text-white nav-link-custom"
+              >
+                Jobs
+              </Nav.Link>
+
+              {/* ✅ User name + Auth buttons */}
+              {user ? (
+                <div className="d-flex align-items-center ms-3">
+                  <span className="fw-semibold text-white me-3">
+                    {userName}
+                  </span>
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  as={Link}
+                  to="/login"
+                  variant="outline-light"
+                  size="sm"
+                  className="ms-3"
+                >
                   Login
-                </NavDropdown.Item>
-                <NavDropdown.Item as={Link} to="/register">
-                  Register
-                </NavDropdown.Item>
-                <NavDropdown.Divider />
-                <NavDropdown.Item as={Link} to="/profile">
-                  My Profile
-                </NavDropdown.Item>
-                <NavDropdown.Item onClick={() => toast.info("Logged out!")}>
-                  Logout
-                </NavDropdown.Item>
-              </NavDropdown>
+                </Button>
+              )}
             </Nav>
           </Navbar.Collapse>
         </Container>
       </Navbar>
+
+      {/* ✅ Custom Hover CSS */}
+      <style>
+        {`
+          .nav-link-custom {
+            transition: color 0.3s, transform 0.2s;
+          }
+          .nav-link-custom:hover {
+            color: #ffd700 !important; /* gold hover */
+            transform: translateY(-2px);
+          }
+        `}
+      </style>
     </>
   );
 }

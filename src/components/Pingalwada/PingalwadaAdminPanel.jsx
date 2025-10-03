@@ -20,6 +20,8 @@ import {
   doc,
   deleteDoc,
   serverTimestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -49,16 +51,16 @@ export default function AdminPanel() {
 
   const nav = useNavigate();
 
-  // ✅ Fetch Users (exclude admins)
+  // ✅ Fetch Users (exclude main admins)
   const fetchUsers = async () => {
     const querySnapshot = await getDocs(collection(db, "users"));
     const allUsers = querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setUsers(allUsers.filter((u) => u.role !== "admin")); // exclude admin
+    setUsers(allUsers.filter((u) => u.role !== "admin"));
   };
 
-  // ✅ Fetch Donors (from payments collection)
+  // ✅ Fetch Donors
   const fetchDonors = async () => {
-    const querySnapshot = await getDocs(collection(db, "payments"));
+    const querySnapshot = await getDocs(collection(db, "donors"));
     setDonors(querySnapshot.docs.map((doc) => doc.data()));
   };
 
@@ -159,15 +161,31 @@ export default function AdminPanel() {
     }
   };
 
-  // ✅ Delete Pingalwada
+  // ✅ Delete Pingalwada AND its Manager
   const handleDeletePingalwada = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this Pingalwada?")) return;
+    if (!window.confirm("Are you sure you want to delete this Pingalwada and its Manager?")) return;
     try {
+      // 1. Find linked manager
+      const q = query(
+        collection(db, "users"),
+        where("pingalwadaId", "==", id),
+        where("role", "==", "pingalwada-admin")
+      );
+      const managerSnap = await getDocs(q);
+
+      // 2. Delete manager user(s)
+      for (let m of managerSnap.docs) {
+        await deleteDoc(doc(db, "users", m.id));
+      }
+
+      // 3. Delete the Pingalwada
       await deleteDoc(doc(db, "pingalwada", id));
-      toast.success("✅ Pingalwada deleted successfully");
+
+      toast.success("✅ Pingalwada and its Manager deleted successfully");
       fetchPingalwadas();
+      fetchUsers();
     } catch (error) {
-      toast.error("❌ Error deleting Pingalwada");
+      toast.error("❌ Error deleting Pingalwada or Manager");
       console.error(error);
     }
   };
@@ -202,7 +220,6 @@ export default function AdminPanel() {
           background: "linear-gradient(180deg, #1e3c72, #2a5298)",
           color: "white",
           padding: "20px",
-          boxShadow: "2px 0 10px rgba(0,0,0,0.2)",
         }}
       >
         <h4 className="text-center mb-4 fw-bold">Admin Panel</h4>
@@ -210,7 +227,7 @@ export default function AdminPanel() {
           <li>
             <Button
               variant={activeTab === "home" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
+              className="w-100 mb-2"
               onClick={() => setActiveTab("home")}
             >
               Home
@@ -219,7 +236,7 @@ export default function AdminPanel() {
           <li>
             <Button
               variant={activeTab === "donors" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
+              className="w-100 mb-2"
               onClick={() => setActiveTab("donors")}
             >
               Donors
@@ -228,7 +245,7 @@ export default function AdminPanel() {
           <li>
             <Button
               variant={activeTab === "volunteers" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
+              className="w-100 mb-2"
               onClick={() => setActiveTab("volunteers")}
             >
               Volunteers
@@ -237,7 +254,7 @@ export default function AdminPanel() {
           <li>
             <Button
               variant={activeTab === "pingalwada" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
+              className="w-100 mb-2"
               onClick={() => setActiveTab("pingalwada")}
             >
               Pingalwada
@@ -246,7 +263,7 @@ export default function AdminPanel() {
           <li>
             <Button
               variant="danger"
-              className="w-100 mt-5 fw-semibold"
+              className="w-100 mt-5"
               onClick={handleLogout}
             >
               Logout
@@ -256,12 +273,12 @@ export default function AdminPanel() {
       </div>
 
       {/* Content */}
-      <div className="flex-grow-1 p-4 bg-light" style={{ minHeight: "100vh" }}>
+      <div className="flex-grow-1 p-4 bg-light">
         {/* Home Tab */}
         {activeTab === "home" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">All Users</h3>
-            <Table striped bordered hover responsive className="align-middle">
+            <Table striped bordered hover responsive>
               <thead className="table-primary">
                 <tr>
                   <th>Email</th>
@@ -273,7 +290,7 @@ export default function AdminPanel() {
                 {users.map((u, i) => (
                   <tr key={i}>
                     <td>{u.email}</td>
-                    <td className="text-capitalize">{u.role}</td>
+                    <td>{u.role}</td>
                     <td>
                       <Button
                         variant="danger"
@@ -293,8 +310,8 @@ export default function AdminPanel() {
         {/* Donors */}
         {activeTab === "donors" && (
           <Card className="p-3 shadow-sm border-0">
-            <h3 className="mb-3 text-primary">Donors List</h3>
-            <Table striped bordered hover responsive className="align-middle">
+            <h3 className="mb-3 text-primary">Donors</h3>
+            <Table striped bordered hover responsive>
               <thead className="table-primary">
                 <tr>
                   <th>Name</th>
@@ -305,13 +322,13 @@ export default function AdminPanel() {
                 </tr>
               </thead>
               <tbody>
-                {donors.map((donor, i) => (
+                {donors.map((d, i) => (
                   <tr key={i}>
-                    <td>{donor.donorName}</td>
-                    <td>{donor.donorEmail}</td>
-                    <td>{donor.donorLocation}</td>
-                    <td>{donor.totalDonations}</td>
-                    <td>₹{donor.totalAmount}</td>
+                    <td>{d.donorName}</td>
+                    <td>{d.donorEmail}</td>
+                    <td>{d.donorLocation}</td>
+                    <td>{d.totalDonations}</td>
+                    <td>₹{d.totalAmount}</td>
                   </tr>
                 ))}
               </tbody>
@@ -322,8 +339,8 @@ export default function AdminPanel() {
         {/* Volunteers */}
         {activeTab === "volunteers" && (
           <Card className="p-3 shadow-sm border-0">
-            <h3 className="mb-3 text-primary">Volunteers List</h3>
-            <Table striped bordered hover responsive className="align-middle">
+            <h3 className="mb-3 text-primary">Volunteers</h3>
+            <Table striped bordered hover responsive>
               <thead className="table-primary">
                 <tr>
                   <th>Name</th>
@@ -333,12 +350,12 @@ export default function AdminPanel() {
                 </tr>
               </thead>
               <tbody>
-                {volunteers.map((volunteer, i) => (
+                {volunteers.map((v, i) => (
                   <tr key={i}>
-                    <td>{volunteer.name}</td>
-                    <td>{volunteer.email}</td>
-                    <td>{volunteer.phone}</td>
-                    <td>{volunteer.interests?.join(", ")}</td>
+                    <td>{v.name}</td>
+                    <td>{v.email}</td>
+                    <td>{v.phone}</td>
+                    <td>{v.interests?.join(", ")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -349,13 +366,8 @@ export default function AdminPanel() {
         {/* Pingalwada */}
         {activeTab === "pingalwada" && (
           <Card className="p-3 shadow-sm border-0">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h3 className="text-primary">Pingalwada Management</h3>
-              <Button variant="success" onClick={() => setShowForm(true)}>
-                + Add Pingalwada
-              </Button>
-            </div>
-            <Table striped bordered hover responsive className="align-middle">
+            <h3 className="mb-3 text-primary">Pingalwada Management</h3>
+            <Table striped bordered hover responsive>
               <thead className="table-primary">
                 <tr>
                   <th>Name</th>
@@ -363,6 +375,7 @@ export default function AdminPanel() {
                   <th>Phone</th>
                   <th>Services</th>
                   <th>Capacity</th>
+                  <th>Razorpay Key</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -374,6 +387,7 @@ export default function AdminPanel() {
                     <td>{p.phone}</td>
                     <td>{p.services?.join(", ")}</td>
                     <td>{p.capacity}</td>
+                    <td>{p.razorpayKey}</td>
                     <td>
                       <Button
                         variant="danger"
@@ -390,169 +404,6 @@ export default function AdminPanel() {
           </Card>
         )}
       </div>
-
-      {/* Modal for Adding Pingalwada */}
-      <Modal show={showForm} onHide={() => setShowForm(false)} centered size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Add Pingalwada</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleAddPingalwada}>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Pingalwada Name *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Location *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Contact Person</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="contactPerson"
-                    value={formData.contactPerson}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Phone *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Manager Email *</Form.Label>
-                  <Form.Control
-                    type="email"
-                    name="managerEmail"
-                    value={formData.managerEmail}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Manager Password *</Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="managerPassword"
-                    value={formData.managerPassword}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Razorpay Key *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="razorpayKey"
-                    value={formData.razorpayKey}
-                    onChange={handleChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>Capacity (No. of people)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="capacity"
-                    value={formData.capacity}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>Services Offered</Form.Label>
-              <div className="d-flex flex-wrap gap-3">
-                {["Medical", "Food", "Shelter", "Education", "Rehabilitation"].map(
-                  (service, idx) => (
-                    <Form.Check
-                      key={idx}
-                      type="checkbox"
-                      label={service}
-                      value={service}
-                      checked={formData.services.includes(service)}
-                      onChange={handleCheckbox}
-                    />
-                  )
-                )}
-              </div>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Cloudinary Image Public ID *</Form.Label>
-              <Form.Control
-                type="text"
-                name="cloudinaryId"
-                placeholder="e.g. pingalwada/image123"
-                value={formData.cloudinaryId}
-                onChange={handleChange}
-                required
-              />
-            </Form.Group>
-            <div className="d-flex justify-content-end">
-              <Button
-                variant="secondary"
-                onClick={() => setShowForm(false)}
-                className="me-2"
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="success">
-                Save Pingalwada
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
     </Container>
   );
 }

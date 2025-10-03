@@ -1,3 +1,4 @@
+// src/components/Public Pannel/Donation.jsx
 import React, { useState } from "react";
 import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
 import { db } from "../../firebase";
@@ -8,8 +9,9 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Donation = () => {
   const [amount, setAmount] = useState("");
@@ -17,18 +19,41 @@ const Donation = () => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
-
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
+  const [profilePic, setProfilePic] = useState(null);
 
   const nav = useNavigate();
+  const location = useLocation();
+  const pingalwada = location.state; // 👈 passed from PingalwadaSection
+  const storage = getStorage();
+
+  // ✅ Upload image to Firebase Storage and return public URL
+  const uploadProfilePic = async (docId) => {
+    if (!profilePic) return "";
+    try {
+      const storageRef = ref(storage, `donors/${docId}-${profilePic.name}`);
+      await uploadBytes(storageRef, profilePic);
+      return await getDownloadURL(storageRef);
+    } catch (err) {
+      console.error("uploadProfilePic error:", err);
+      toast.error("Image upload failed.");
+      return "";
+    }
+  };
 
   const handlePayment = async () => {
-    if (!amount || !name || !email || !message) {
+    if (!amount || !name || !email) {
       alert("Please fill all required fields.");
       return;
     }
 
+    if (!pingalwada?.paymentGatewayKey) {
+      toast.error("This Pingalwada does not have a Razorpay key.");
+      return;
+    }
+
+    // Step 1: Create initial Firestore doc
     let createdDocRef = null;
     try {
       const paymentsCol = collection(db, "payments");
@@ -39,7 +64,8 @@ const Donation = () => {
         donorState: state || "",
         donorCity: city || "",
         amount: Number(amount),
-        message: message,
+        message: message || "",
+        pingalwadaId: pingalwada.id, // ✅ link to Pingalwada
         createdAt: serverTimestamp(),
       });
       createdDocRef = initDoc;
@@ -51,12 +77,13 @@ const Donation = () => {
 
     const docId = createdDocRef.id;
 
+    // Step 2: Razorpay options
     const options = {
-      key: "rzp_test_RO6yowrTlsHmWL", // 🔑 test key
+      key: pingalwada.paymentGatewayKey, // ✅ dynamic Razorpay key
       amount: Number(amount) * 100,
       currency: "INR",
-      name: "Helping Hand",
-      description: "Donation",
+      name: pingalwada.name,
+      description: `Donation to ${pingalwada.name}`,
       prefill: { name, email, contact: "9999999999" },
       theme: { color: "#0066cc" },
 
@@ -64,10 +91,18 @@ const Donation = () => {
         try {
           const paymentId = response?.razorpay_payment_id || "";
 
+          // ✅ Upload profile picture FIRST
+          let profileUrl = "";
+          if (profilePic) {
+            profileUrl = await uploadProfilePic(docId);
+          }
+
+          // ✅ Update Firestore with final details
           const paymentDocRef = doc(db, "payments", docId);
           await updateDoc(paymentDocRef, {
             status: "success",
             paymentId,
+            donorProfilePic: profileUrl,
             updatedAt: serverTimestamp(),
             completedAt: new Date().toISOString(),
           });
@@ -75,13 +110,14 @@ const Donation = () => {
           toast.success("🎉 Payment successful!");
           setSubmitted(true);
 
-          // ✅ Clear form after update
+          // ✅ Clear form
           setAmount("");
           setName("");
           setEmail("");
           setMessage("");
           setState("");
           setCity("");
+          setProfilePic(null);
 
           nav("/thankyou");
         } catch (err) {
@@ -104,9 +140,12 @@ const Donation = () => {
     <Container className="py-5">
       <Row className="justify-content-center text-center mb-5">
         <Col md={8}>
-          <h1 className="text-success fw-bold">Make a Difference Today 💚</h1>
+          <h1 className="text-success fw-bold">
+            Donate to {pingalwada?.name || "Pingalwada"} 💚
+          </h1>
           <p className="text-muted">
-            Your donation helps us provide education, healthcare, and shelter to those in need.
+            Your donation will directly support {pingalwada?.name} in{" "}
+            {pingalwada?.location}.
           </p>
         </Col>
       </Row>
@@ -148,7 +187,6 @@ const Donation = () => {
                   />
                 </Form.Group>
 
-                {/* State + City on same row */}
                 <Row>
                   <Col>
                     <Form.Group className="mb-3">
@@ -175,6 +213,31 @@ const Donation = () => {
                 </Row>
 
                 <Form.Group className="mb-3">
+                  <Form.Label>Profile Picture (Optional)</Form.Label>
+                  <Form.Control
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setProfilePic(e.target.files?.[0] || null)
+                    }
+                  />
+                  {profilePic && (
+                    <div className="mt-2 text-center">
+                      <img
+                        src={URL.createObjectURL(profilePic)}
+                        alt="preview"
+                        style={{
+                          width: "80px",
+                          height: "80px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    </div>
+                  )}
+                </Form.Group>
+
+                <Form.Group className="mb-3">
                   <Form.Label>Donation Amount (₹) *</Form.Label>
                   <Form.Control
                     type="number"
@@ -185,14 +248,13 @@ const Donation = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Message *</Form.Label>
+                  <Form.Label>Message (Optional)</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
                     placeholder="Write a message..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    required
                   />
                 </Form.Group>
 
@@ -210,4 +272,4 @@ const Donation = () => {
   );
 };
 
-export default Donation;
+export default Donation; 

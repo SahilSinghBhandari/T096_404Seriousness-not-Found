@@ -1,9 +1,22 @@
+// src/components/auth/Register.jsx
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Form, Button, Container, Row, Col, Card, Spinner } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import {
+  Form,
+  Button,
+  Container,
+  Row,
+  Col,
+  Card,
+  Spinner,
+} from "react-bootstrap";
+import { useNavigate, Link } from "react-router-dom";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { toast } from "react-toastify";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -20,25 +33,29 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      const userCred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCred.user;
 
-      // Save user to Firestore "users" collection
+      // Save user to Firestore "users" collection with role = user
       await setDoc(
         doc(db, "users", user.uid),
         {
           uid: user.uid,
           name: name,
           email: user.email,
+          role: "user",
           createdAt: serverTimestamp(),
         },
-        { merge: true } // ✅ avoid overwriting if user already exists
+        { merge: true }
       );
 
-      toast.success("🎉 User Registered Successfully");
+      toast.success("User Registered Successfully");
       nav("/");
     } catch (error) {
-      console.error("Registration Error:", error);
       toast.error(error.message || "Registration failed");
     } finally {
       setLoading(false);
@@ -60,15 +77,15 @@ export default function Register() {
           name: user.displayName || "",
           email: user.email,
           photo: user.photoURL || "",
+          role: "user",
           createdAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      toast.success("🎉 Google Sign-in Successful");
+      toast.success("Google Sign-in Successful");
       nav("/");
     } catch (error) {
-      console.error("Google Sign-in Error:", error);
       toast.error(error.message || "Google Sign-in failed");
     } finally {
       setLoading(false);
@@ -78,17 +95,18 @@ export default function Register() {
   return (
     <div
       style={{
-        height: "100vh",
+        minHeight: "100vh",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#f5f7fa",
+        backgroundColor: "#ffffff",
         padding: "20px",
       }}
     >
       <Container>
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
+            {/* ✅ Whole card animation only */}
             <motion.div
               initial={{ opacity: 0, y: -50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -98,12 +116,12 @@ export default function Register() {
                 <Row className="g-0">
                   {/* ✅ Left Form Section */}
                   <Col md={6} className="p-4">
-                    <motion.h3
+                    <h3
                       className="text-center mb-4"
                       style={{ color: "#1e3c72", fontWeight: "bold" }}
                     >
                       Register
-                    </motion.h3>
+                    </h3>
 
                     <Form onSubmit={handleRegister}>
                       {/* Name */}
@@ -143,38 +161,62 @@ export default function Register() {
                       </Form.Group>
 
                       {/* Register Button */}
-                      <Button
-                        variant="primary"
-                        type="submit"
-                        className="w-100"
-                        style={{ backgroundColor: "#1e3c72", border: "none" }}
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              role="status"
-                              aria-hidden="true"
-                            />{" "}
-                            Registering...
-                          </>
-                        ) : (
-                          "Register"
-                        )}
-                      </Button>
+                      <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                        <Button
+                          variant="primary"
+                          type="submit"
+                          className="w-100"
+                          style={{ backgroundColor: "#1e3c72", border: "none" }}
+                          disabled={loading}
+                        >
+                          {loading ? (
+                            <>
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                              />{" "}
+                              Registering...
+                            </>
+                          ) : (
+                            "Register"
+                          )}
+                        </Button>
+                      </motion.div>
 
                       {/* Google Sign In */}
-                      <Button
-                        variant="outline-danger"
-                        className="w-100 mt-3"
-                        onClick={signInGoogle}
-                        disabled={loading}
+                      <motion.div
+                        className="mt-3"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
                       >
-                        {loading ? "Please wait..." : "Sign up with Google"}
-                      </Button>
+                        <Button
+                          variant="outline-primary"
+                          className="w-100"
+                          onClick={signInGoogle}
+                          disabled={loading}
+                          style={{
+                            border: "2px solid #1e3c72",
+                            color: "#1e3c72",
+                            fontWeight: "600",
+                          }}
+                        >
+                          {loading ? "Please wait..." : "Sign up with Google"}
+                        </Button>
+                      </motion.div>
+
+                      {/* ✅ Go to Login */}
+                      <div className="text-center mt-3">
+                        <span style={{ color: "#555" }}>Already have an account? </span>
+                        <Link
+                          to="/login"
+                          style={{ color: "#1e3c72", fontWeight: "bold" }}
+                        >
+                          Login
+                        </Link>
+                      </div>
                     </Form>
                   </Col>
 
@@ -184,7 +226,7 @@ export default function Register() {
                     className="d-flex align-items-center justify-content-center bg-light"
                   >
                     <DotLottieReact
-                      src="https://lottie.host/4ac3e52c-4d07-4f3c-b2e4-c39df5efefcf/y3RQY9gctT.lottie"
+                      src="https://lottie.host/eb282d4f-670d-4e4e-8e4f-cdeddba51b71/Qi86efPBr5.lottie"
                       loop
                       autoplay
                       style={{ width: "90%", maxWidth: "350px" }}
