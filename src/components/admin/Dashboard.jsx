@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import {
   Container,
-  Row,
-  Col,
   Button,
   Table,
   Form,
   Card,
   Modal,
 } from "react-bootstrap";
-import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import {
   collection,
@@ -41,13 +39,8 @@ export default function AdminPanel() {
     location: "",
     contactPerson: "",
     phone: "",
-    managerEmail: "",
-    managerPassword: "",
     capacity: "",
-    services: [],
     description: "",
-    cloudinaryId: "",
-    razorpayKey: "",
   });
 
   // Job form data
@@ -76,7 +69,9 @@ export default function AdminPanel() {
 
   const fetchVolunteers = async () => {
     const querySnapshot = await getDocs(collection(db, "volunteers"));
-    setVolunteers(querySnapshot.docs.map((doc) => doc.data()));
+    setVolunteers(
+      querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+    );
   };
 
   const fetchPingalwadas = async () => {
@@ -97,6 +92,31 @@ export default function AdminPanel() {
     fetchJobs();
   }, []);
 
+  // 🔹 Add Pingalwada
+  const handleAddPingalwada = async (e) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, "pingalwada"), {
+        ...formData,
+        createdAt: serverTimestamp(),
+      });
+      toast.success("✅ Pingalwada added successfully!");
+      setShowForm(false);
+      setFormData({
+        name: "",
+        location: "",
+        contactPerson: "",
+        phone: "",
+        capacity: "",
+        description: "",
+      });
+      fetchPingalwadas();
+    } catch (error) {
+      toast.error("❌ Failed to add Pingalwada");
+      console.error(error);
+    }
+  };
+
   // 🔹 Add Job
   const handleAddJob = async (e) => {
     e.preventDefault();
@@ -107,7 +127,14 @@ export default function AdminPanel() {
       });
       toast.success("✅ Job added successfully!");
       setShowJobForm(false);
-      setJobData({ title: "", category: "", location: "", time: "", skills: "", description: "" });
+      setJobData({
+        title: "",
+        category: "",
+        location: "",
+        time: "",
+        skills: "",
+        description: "",
+      });
       fetchJobs();
     } catch (error) {
       toast.error("❌ Failed to add job");
@@ -141,13 +168,39 @@ export default function AdminPanel() {
 
   // 🔹 Delete Pingalwada
   const handleDeletePingalwada = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this Pingalwada?")) return;
+    if (!window.confirm("Delete this Pingalwada?")) return;
     try {
       await deleteDoc(doc(db, "pingalwada", id));
       toast.success("✅ Pingalwada deleted successfully");
       fetchPingalwadas();
     } catch (error) {
       toast.error("❌ Error deleting Pingalwada");
+    }
+  };
+
+  // 🔹 Toggle User Status
+  const handleToggleUser = async (id, status) => {
+    try {
+      await setDoc(doc(db, "users", id), { status }, { merge: true });
+      toast.success(`User status set to ${status}`);
+      fetchUsers();
+    } catch (error) {
+      toast.error("❌ Failed to update user status");
+      console.error(error);
+    }
+  };
+
+  // 🔹 Toggle Volunteer Status (update in BOTH collections)
+  const handleToggleVolunteer = async (id, status) => {
+    try {
+      await setDoc(doc(db, "volunteers", id), { status }, { merge: true });
+      await setDoc(doc(db, "users", id), { status }, { merge: true });
+      toast.success(`Volunteer ${status}`);
+      fetchVolunteers();
+      fetchUsers();
+    } catch (error) {
+      toast.error("❌ Failed to update status");
+      console.error(error);
     }
   };
 
@@ -173,19 +226,66 @@ export default function AdminPanel() {
       >
         <h4 className="text-center mb-4 fw-bold">Admin Panel</h4>
         <ul className="list-unstyled">
-          <li><Button variant={activeTab === "home" ? "light" : "outline-light"} className="w-100 mb-2 fw-semibold" onClick={() => setActiveTab("home")}>Home</Button></li>
-          <li><Button variant={activeTab === "donors" ? "light" : "outline-light"} className="w-100 mb-2 fw-semibold" onClick={() => setActiveTab("donors")}>Donors</Button></li>
-          <li><Button variant={activeTab === "volunteers" ? "light" : "outline-light"} className="w-100 mb-2 fw-semibold" onClick={() => setActiveTab("volunteers")}>Volunteers</Button></li>
-          <li><Button variant={activeTab === "pingalwada" ? "light" : "outline-light"} className="w-100 mb-2 fw-semibold" onClick={() => setActiveTab("pingalwada")}>Pingalwada</Button></li>
-          <li><Button variant={activeTab === "jobs" ? "light" : "outline-light"} className="w-100 mb-2 fw-semibold" onClick={() => setActiveTab("jobs")}>Jobs</Button></li>
-          <li><Button variant="danger" className="w-100 mt-5 fw-semibold" onClick={handleLogout}>Logout</Button></li>
+          <li>
+            <Button
+              variant={activeTab === "home" ? "light" : "outline-light"}
+              className="w-100 mb-2 fw-semibold"
+              onClick={() => setActiveTab("home")}
+            >
+              Home
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant={activeTab === "donors" ? "light" : "outline-light"}
+              className="w-100 mb-2 fw-semibold"
+              onClick={() => setActiveTab("donors")}
+            >
+              Donors
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant={activeTab === "volunteers" ? "light" : "outline-light"}
+              className="w-100 mb-2 fw-semibold"
+              onClick={() => setActiveTab("volunteers")}
+            >
+              Volunteers
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant={activeTab === "pingalwada" ? "light" : "outline-light"}
+              className="w-100 mb-2 fw-semibold"
+              onClick={() => setActiveTab("pingalwada")}
+            >
+              Pingalwada
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant={activeTab === "jobs" ? "light" : "outline-light"}
+              className="w-100 mb-2 fw-semibold"
+              onClick={() => setActiveTab("jobs")}
+            >
+              Jobs
+            </Button>
+          </li>
+          <li>
+            <Button
+              variant="danger"
+              className="w-100 mt-5 fw-semibold"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </li>
         </ul>
       </div>
 
       {/* Content */}
       <div className="flex-grow-1 p-4 bg-light" style={{ minHeight: "100vh" }}>
-        
-        {/* Users (Home Tab) */}
+        {/* Users */}
         {activeTab === "home" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">All Users</h3>
@@ -194,7 +294,8 @@ export default function AdminPanel() {
                 <tr>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Action</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -203,8 +304,41 @@ export default function AdminPanel() {
                     <td>{u.email}</td>
                     <td>{u.role}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteUser(u.id)}>
-                        Delete
+                      <span
+                        className={`badge ${
+                          u.status === "accepted"
+                            ? "bg-success"
+                            : u.status === "blocked"
+                            ? "bg-danger"
+                            : "bg-warning text-dark"
+                        }`}
+                      >
+                        {u.status || "pending"}
+                      </span>
+                    </td>
+                    <td>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => handleToggleUser(u.id, "accepted")}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        variant="warning"
+                        size="sm"
+                        className="me-2"
+                        onClick={() => handleToggleUser(u.id, "pending")}
+                      >
+                        Pending
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleToggleUser(u.id, "blocked")}
+                      >
+                        Block
                       </Button>
                     </td>
                   </tr>
@@ -254,6 +388,8 @@ export default function AdminPanel() {
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Skills</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,6 +399,50 @@ export default function AdminPanel() {
                     <td>{v.email}</td>
                     <td>{v.phone}</td>
                     <td>{v.interests?.join(", ")}</td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          v.status === "accepted"
+                            ? "bg-success"
+                            : v.status === "blocked"
+                            ? "bg-danger"
+                            : "bg-warning text-dark"
+                        }`}
+                      >
+                        {v.status || "pending"}
+                      </span>
+                    </td>
+                    <td>
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="me-2"
+                        onClick={() =>
+                          handleToggleVolunteer(v.id, "accepted")
+                        }
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        variant="warning"
+                        size="sm"
+                        className="me-2"
+                        onClick={() =>
+                          handleToggleVolunteer(v.id, "pending")
+                        }
+                      >
+                        Pending
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() =>
+                          handleToggleVolunteer(v.id, "blocked")
+                        }
+                      >
+                        Block
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -275,7 +455,9 @@ export default function AdminPanel() {
           <Card className="p-3 shadow-sm border-0">
             <div className="d-flex justify-content-between mb-3">
               <h3 className="text-primary">Pingalwada Management</h3>
-              <Button variant="success" onClick={() => setShowForm(true)}>+ Add Pingalwada</Button>
+              <Button variant="success" onClick={() => setShowForm(true)}>
+                + Add Pingalwada
+              </Button>
             </div>
             <Table striped bordered hover responsive>
               <thead className="table-primary">
@@ -283,9 +465,9 @@ export default function AdminPanel() {
                   <th>Name</th>
                   <th>Location</th>
                   <th>Phone</th>
-                  <th>Services</th>
                   <th>Capacity</th>
-                  <th>Action</th>
+                  <th>Description</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -294,10 +476,14 @@ export default function AdminPanel() {
                     <td>{p.name}</td>
                     <td>{p.location}</td>
                     <td>{p.phone}</td>
-                    <td>{p.services?.join(", ")}</td>
                     <td>{p.capacity}</td>
+                    <td>{p.description}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => handleDeletePingalwada(p.id)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDeletePingalwada(p.id)}
+                      >
                         Delete
                       </Button>
                     </td>
@@ -337,7 +523,11 @@ export default function AdminPanel() {
                     <td>{job.skills}</td>
                     <td>{job.description}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => handleDeleteJob(job.id)}>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDeleteJob(job.id)}
+                      >
                         Delete
                       </Button>
                     </td>
@@ -349,24 +539,144 @@ export default function AdminPanel() {
         )}
       </div>
 
+      {/* Modal for Adding Pingalwada */}
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Add Pingalwada</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleAddPingalwada}>
+            <Form.Group className="mb-2">
+              <Form.Label>Name</Form.Label>
+              <Form.Control
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Location</Form.Label>
+              <Form.Control
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Phone</Form.Label>
+              <Form.Control
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Capacity</Form.Label>
+              <Form.Control
+                value={formData.capacity}
+                onChange={(e) =>
+                  setFormData({ ...formData, capacity: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Button type="submit" variant="success" className="mt-2 w-100">
+              Add Pingalwada
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
       {/* Modal for Adding Job */}
       <Modal show={showJobForm} onHide={() => setShowJobForm(false)} centered>
-        <Modal.Header closeButton><Modal.Title>Add Job</Modal.Title></Modal.Header>
+        <Modal.Header closeButton>
+          <Modal.Title>Add Job</Modal.Title>
+        </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleAddJob}>
-            <Form.Group className="mb-2"><Form.Label>Job Title</Form.Label>
-              <Form.Control value={jobData.title} onChange={(e) => setJobData({ ...jobData, title: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-2"><Form.Label>Category</Form.Label>
-              <Form.Control value={jobData.category} onChange={(e) => setJobData({ ...jobData, category: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-2"><Form.Label>Location</Form.Label>
-              <Form.Control value={jobData.location} onChange={(e) => setJobData({ ...jobData, location: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-2"><Form.Label>Time</Form.Label>
-              <Form.Control value={jobData.time} onChange={(e) => setJobData({ ...jobData, time: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-2"><Form.Label>Skills Required</Form.Label>
-              <Form.Control value={jobData.skills} onChange={(e) => setJobData({ ...jobData, skills: e.target.value })} required /></Form.Group>
-            <Form.Group className="mb-2"><Form.Label>Description</Form.Label>
-              <Form.Control as="textarea" rows={2} value={jobData.description} onChange={(e) => setJobData({ ...jobData, description: e.target.value })} required /></Form.Group>
-            <Button type="submit" variant="success" className="mt-2 w-100">Add Job</Button>
+            <Form.Group className="mb-2">
+              <Form.Label>Job Title</Form.Label>
+              <Form.Control
+                value={jobData.title}
+                onChange={(e) =>
+                  setJobData({ ...jobData, title: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Category</Form.Label>
+              <Form.Control
+                value={jobData.category}
+                onChange={(e) =>
+                  setJobData({ ...jobData, category: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Location</Form.Label>
+              <Form.Control
+                value={jobData.location}
+                onChange={(e) =>
+                  setJobData({ ...jobData, location: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Time</Form.Label>
+              <Form.Control
+                value={jobData.time}
+                onChange={(e) =>
+                  setJobData({ ...jobData, time: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Skills Required</Form.Label>
+              <Form.Control
+                value={jobData.skills}
+                onChange={(e) =>
+                  setJobData({ ...jobData, skills: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={jobData.description}
+                onChange={(e) =>
+                  setJobData({ ...jobData, description: e.target.value })
+                }
+                required
+              />
+            </Form.Group>
+            <Button type="submit" variant="success" className="mt-2 w-100">
+              Add Job
+            </Button>
           </Form>
         </Modal.Body>
       </Modal>

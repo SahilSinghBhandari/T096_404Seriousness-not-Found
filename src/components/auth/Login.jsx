@@ -1,4 +1,3 @@
-// // src/components/auth/Login.jsx
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Form, Button, Container, Row, Col, Card } from "react-bootstrap";
@@ -8,6 +7,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
+  signOut,
 } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
@@ -42,7 +42,7 @@ export default function Login() {
     }
   };
 
-  // ✅ Handle Login
+  // ✅ Handle Login (Email/Password)
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -54,8 +54,26 @@ export default function Login() {
       const userCred = await signInWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
 
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      // 🔹 Blocked or Pending Check
+      if (userSnap.exists()) {
+        const status = userSnap.data().status;
+        if (status === "blocked") {
+          await signOut(auth);
+          toast.error("❌ Your account has been blocked by admin.");
+          return;
+        }
+        if (status === "pending") {
+          await signOut(auth);
+          toast.info("⏳ Your account is pending approval by admin.");
+          return;
+        }
+      }
+
       await setDoc(
-        doc(db, "users", user.uid),
+        userRef,
         {
           uid: user.uid,
           email: user.email,
@@ -86,8 +104,26 @@ export default function Login() {
       const userCred = await signInWithPopup(auth, provider);
       const user = userCred.user;
 
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      // 🔹 Blocked or Pending Check
+      if (userSnap.exists()) {
+        const status = userSnap.data().status;
+        if (status === "blocked") {
+          await signOut(auth);
+          toast.error("❌ Your account has been blocked by admin.");
+          return;
+        }
+        if (status === "pending") {
+          await signOut(auth);
+          toast.info("⏳ Your account is pending approval by admin.");
+          return;
+        }
+      }
+
       await setDoc(
-        doc(db, "users", user.uid),
+        userRef,
         {
           uid: user.uid,
           email: user.email,
@@ -112,14 +148,13 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#ffffff", // ✅ White background
+        backgroundColor: "#ffffff",
         padding: "20px",
       }}
     >
       <Container>
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
-            {/* ✅ Animate the whole card only */}
             <motion.div
               initial={{ opacity: 0, y: -50 }}
               animate={{ opacity: 1, y: 0 }}
@@ -127,7 +162,7 @@ export default function Login() {
             >
               <Card className="shadow-lg rounded-4 overflow-hidden border-0">
                 <Row className="g-0">
-                  {/* ✅ Left Form Section */}
+                  {/* Left Form Section */}
                   <Col md={6} className="p-4">
                     <h3
                       className="text-center mb-4"
@@ -137,7 +172,6 @@ export default function Login() {
                     </h3>
 
                     <Form onSubmit={handleLogin}>
-                      {/* Email */}
                       <Form.Group className="mb-3">
                         <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
                           Email Address
@@ -151,7 +185,6 @@ export default function Login() {
                         />
                       </Form.Group>
 
-                      {/* Password */}
                       <Form.Group className="mb-3">
                         <Form.Label style={{ color: "#1e3c72", fontWeight: "500" }}>
                           Password
@@ -165,7 +198,6 @@ export default function Login() {
                         />
                       </Form.Group>
 
-                      {/* Login Button */}
                       <div className="d-grid">
                         <Button
                           variant="primary"
@@ -180,7 +212,6 @@ export default function Login() {
                         </Button>
                       </div>
 
-                      {/* Google Sign In */}
                       <div className="d-grid mt-3">
                         <Button
                           variant="outline-primary"
@@ -195,7 +226,6 @@ export default function Login() {
                         </Button>
                       </div>
 
-                      {/* Register Now Link */}
                       <div className="text-center mt-3">
                         <span style={{ color: "#555" }}>Don't have an account? </span>
                         <Link
@@ -208,7 +238,7 @@ export default function Login() {
                     </Form>
                   </Col>
 
-                  {/* ✅ Right Animation Section */}
+                  {/* Right Animation Section */}
                   <Col
                     md={6}
                     className="d-flex align-items-center justify-content-center bg-light"

@@ -33,14 +33,10 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
 
-      // Save user to Firestore "users" collection with role = user
+      // Save user to Firestore "users" collection with default status = pending
       await setDoc(
         doc(db, "users", user.uid),
         {
@@ -48,15 +44,16 @@ export default function Register() {
           name: name,
           email: user.email,
           role: "user",
+          status: "pending",   // 🔹 Default when registering
           createdAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      toast.success("User Registered Successfully");
-      nav("/");
+      toast.success("✅ User Registered Successfully. Waiting for admin approval.");
+      nav("/login"); // redirect to login instead of home
     } catch (error) {
-      toast.error(error.message || "Registration failed");
+      toast.error(error.message || "❌ Registration failed");
     } finally {
       setLoading(false);
     }
@@ -78,15 +75,16 @@ export default function Register() {
           email: user.email,
           photo: user.photoURL || "",
           role: "user",
+          status: "pending",   // 🔹 Default for Google sign-in too
           createdAt: serverTimestamp(),
         },
         { merge: true }
       );
 
-      toast.success("Google Sign-in Successful");
-      nav("/");
+      toast.success("✅ Google Sign-in Successful. Waiting for admin approval.");
+      nav("/login"); // redirect to login page
     } catch (error) {
-      toast.error(error.message || "Google Sign-in failed");
+      toast.error(error.message || "❌ Google Sign-in failed");
     } finally {
       setLoading(false);
     }
