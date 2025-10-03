@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Button, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Button, Spinner, Modal, Form } from "react-bootstrap";
 import { db } from "../../firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { useNavigate } from "react-router-dom";
+import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { toast } from "react-toastify";
 
 export default function Jobs() {
   const [jobsByCategory, setJobsByCategory] = useState({});
   const [loading, setLoading] = useState(true);
-  const nav = useNavigate();
+
+  // Modal state
+  const [showForm, setShowForm] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+
+  // Application form state
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    skills: "",
+    message: "",
+  });
 
   // ✅ Fetch jobs and group by category
   useEffect(() => {
@@ -36,9 +48,34 @@ export default function Jobs() {
     fetchJobs();
   }, []);
 
-  // ✅ Handle Apply button
-  const handleApply = (job) => {
-    nav("/volunteer", { state: { job } });
+  // ✅ Open Apply form for a job
+  const handleApplyClick = (job) => {
+    setSelectedJob(job);
+    setShowForm(true);
+  };
+
+  // ✅ Submit Application
+  const handleApplicationSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedJob) return;
+
+    try {
+      await addDoc(collection(db, "applications"), {
+        ...formData,
+        jobId: selectedJob.id,
+        jobTitle: selectedJob.title,
+        createdAt: serverTimestamp(),
+      });
+
+      toast.success("✅ Application submitted successfully!");
+      setShowForm(false);
+
+      // Reset form
+      setFormData({ name: "", email: "", phone: "", skills: "", message: "" });
+    } catch (error) {
+      console.error("❌ Error submitting application:", error);
+      toast.error("Failed to submit application. Try again.");
+    }
   };
 
   return (
@@ -76,7 +113,7 @@ export default function Jobs() {
                       <Button
                         variant="primary"
                         className="mt-2"
-                        onClick={() => handleApply(job)}
+                        onClick={() => handleApplyClick(job)}
                       >
                         Apply Now
                       </Button>
@@ -88,6 +125,66 @@ export default function Jobs() {
           </div>
         ))
       )}
+
+      {/* ✅ Application Modal */}
+      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Apply for {selectedJob?.title}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleApplicationSubmit}>
+            <Form.Group className="mb-2">
+              <Form.Label>Full Name</Form.Label>
+              <Form.Control
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Phone</Form.Label>
+              <Form.Control
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Skills</Form.Label>
+              <Form.Control
+                type="text"
+                value={formData.skills}
+                onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Why do you want to join?</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              />
+            </Form.Group>
+            <Button type="submit" variant="success" className="w-100">
+              Submit Application
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 }
