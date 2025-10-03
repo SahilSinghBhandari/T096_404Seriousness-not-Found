@@ -1,6 +1,6 @@
 // src/components/Public Pannel/Donation.jsx
 import React, { useState } from "react";
-import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from "react-bootstrap";
 import { db } from "../../firebase";
 import {
   doc,
@@ -22,13 +22,25 @@ const Donation = () => {
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [profilePic, setProfilePic] = useState(null);
+  const [loading, setLoading] = useState(false); // ✅ spinner state
 
   const nav = useNavigate();
   const location = useLocation();
-  const pingalwada = location.state; // 👈 passed from PingalwadaSection
+  const pingalwada = location.state; 
   const storage = getStorage();
 
-  // ✅ Upload image to Firebase Storage and return public URL
+  // ✅ Reset form
+  const resetForm = () => {
+    setAmount("");
+    setName("");
+    setEmail("");
+    setMessage("");
+    setState("");
+    setCity("");
+    setProfilePic(null);
+  };
+
+  // ✅ Upload profile picture
   const uploadProfilePic = async (docId) => {
     if (!profilePic) return "";
     try {
@@ -43,17 +55,19 @@ const Donation = () => {
   };
 
   const handlePayment = async () => {
-    if (!amount || !name || !email) {
-      alert("Please fill all required fields.");
+    if (!amount || !name || !email || !message) {
+      alert("Please fill all required fields including message.");
       return;
     }
 
-    if (!pingalwada?.paymentGatewayKey) {
+    if (!pingalwada?.razorpayKey) {
       toast.error("This Pingalwada does not have a Razorpay key.");
       return;
     }
 
-    // Step 1: Create initial Firestore doc
+    setLoading(true);
+
+
     let createdDocRef = null;
     try {
       const paymentsCol = collection(db, "payments");
@@ -63,23 +77,26 @@ const Donation = () => {
         donorEmail: email,
         donorState: state || "",
         donorCity: city || "",
+        donorMessage: message,
+        donorProfilePic: "",
         amount: Number(amount),
-        message: message || "",
-        pingalwadaId: pingalwada.id, // ✅ link to Pingalwada
+        pingalwadaId: pingalwada.id,
+        pingalwadaName: pingalwada.name,
         createdAt: serverTimestamp(),
       });
       createdDocRef = initDoc;
     } catch (err) {
       console.error("Error creating initial payment doc:", err);
       toast.error("Could not initialize payment. Try again.");
+      setLoading(false);
       return;
     }
 
     const docId = createdDocRef.id;
 
-    // Step 2: Razorpay options
+
     const options = {
-      key: pingalwada.paymentGatewayKey, // ✅ dynamic Razorpay key
+      key: "rzp_test_ROv4afGSGZTaUy",
       amount: Number(amount) * 100,
       currency: "INR",
       name: pingalwada.name,
@@ -91,39 +108,45 @@ const Donation = () => {
         try {
           const paymentId = response?.razorpay_payment_id || "";
 
-          // ✅ Upload profile picture FIRST
           let profileUrl = "";
           if (profilePic) {
             profileUrl = await uploadProfilePic(docId);
           }
 
-          // ✅ Update Firestore with final details
           const paymentDocRef = doc(db, "payments", docId);
           await updateDoc(paymentDocRef, {
             status: "success",
             paymentId,
             donorProfilePic: profileUrl,
+            donorName: name,
+            donorEmail: email,
+            donorState: state,
+            donorCity: city,
+            donorMessage: message,
+            pingalwadaId: pingalwada.id,
+            pingalwadaName: pingalwada.name,
             updatedAt: serverTimestamp(),
             completedAt: new Date().toISOString(),
           });
 
           toast.success("🎉 Payment successful!");
           setSubmitted(true);
-
-          // ✅ Clear form
-          setAmount("");
-          setName("");
-          setEmail("");
-          setMessage("");
-          setState("");
-          setCity("");
-          setProfilePic(null);
-
+          resetForm();
           nav("/thankyou");
         } catch (err) {
           console.error("Error in payment handler:", err);
           toast.error("Payment succeeded, but saving failed.");
+        } finally {
+          setLoading(false); // ✅ stop spinner
         }
+      },
+
+      modal: {
+        ondismiss: () => {
+          toast.info("Payment cancelled by user.");
+          resetForm();
+          setLoading(false); // ✅ stop spinner if user cancels
+        },
       },
     };
 
@@ -133,6 +156,8 @@ const Donation = () => {
     } catch (err) {
       console.error("Razorpay open error:", err);
       toast.error("Unable to open payment checkout.");
+      resetForm();
+      setLoading(false); // ✅ stop spinner on error
     }
   };
 
@@ -217,9 +242,7 @@ const Donation = () => {
                   <Form.Control
                     type="file"
                     accept="image/*"
-                    onChange={(e) =>
-                      setProfilePic(e.target.files?.[0] || null)
-                    }
+                    onChange={(e) => setProfilePic(e.target.files?.[0] || null)}
                   />
                   {profilePic && (
                     <div className="mt-2 text-center">
@@ -248,19 +271,36 @@ const Donation = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Message (Optional)</Form.Label>
+                  <Form.Label>Message *</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
                     placeholder="Write a message..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    required
                   />
                 </Form.Group>
 
                 <div className="d-grid">
-                  <Button variant="success" size="lg" onClick={handlePayment}>
-                    Donate Now 💝
+                  <Button
+                    variant="success"
+                    size="lg"
+                    onClick={handlePayment}
+                    disabled={loading} // disable button while loading
+                  >
+                    {loading ? (
+                      <>
+                        <Spinner
+                          animation="border"
+                          size="sm"
+                          className="me-2"
+                        />
+                        Processing...
+                      </>
+                    ) : (
+                      "Donate Now 💝"
+                    )}
                   </Button>
                 </div>
               </Form>
@@ -272,4 +312,4 @@ const Donation = () => {
   );
 };
 
-export default Donation; 
+export default Donation;

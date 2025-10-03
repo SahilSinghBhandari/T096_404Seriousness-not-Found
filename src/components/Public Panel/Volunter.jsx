@@ -14,9 +14,10 @@ import {
 import { toast } from "react-toastify";
 import Webcam from "react-webcam";
 
-// Firebase Firestore
+// Firebase
 import { db } from "../../firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { useLocation } from "react-router-dom";
 
 const Volunteer = () => {
@@ -75,7 +76,7 @@ const Volunteer = () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
-  // ✅ Submit form (store in Firestore under Pingalwada subcollection)
+  // ✅ Submit form (store in root-level volunteers collection)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -84,14 +85,9 @@ const Volunteer = () => {
       !formData.email ||
       !formData.phone ||
       !formData.availability ||
-      !formData.message
+      !formData.message // ✅ mandatory
     ) {
       toast.warn("⚠️ Please fill all required fields including your message.");
-      return;
-    }
-
-    if (!image) {
-      toast.warn("⚠️ Please upload or capture your photo before submitting.");
       return;
     }
 
@@ -103,17 +99,26 @@ const Volunteer = () => {
     setLoading(true);
 
     try {
-      // ✅ Store under pingalwada/{pingalwadaId}/volunteers
-      await addDoc(
-        collection(db, "pingalwada", pingalwada.id, "volunteers"),
-        {
-          ...formData,
-          image, // base64 string
-          pingalwadaId: pingalwada.id,
-          pingalwadaName: pingalwada.name,
-          createdAt: serverTimestamp(),
-        }
-      );
+      let imageUrl = "";
+      if (image) {
+        // ✅ Upload image to Firebase Storage (optional)
+        const storage = getStorage();
+        const storageRef = ref(
+          storage,
+          `volunteers/${pingalwada.id}-${Date.now()}.jpg`
+        );
+        await uploadString(storageRef, image, "data_url");
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      // ✅ Store volunteer details in Firestore root collection "volunteers"
+      await addDoc(collection(db, "volunteers"), {
+        ...formData,
+        imageUrl, // only store URL if uploaded
+        pingalwadaId: pingalwada.id,
+        pingalwadaName: pingalwada.name,
+        createdAt: serverTimestamp(),
+      });
 
       setLoading(false);
       setSubmitted(true);
@@ -146,12 +151,10 @@ const Volunteer = () => {
                 Volunteer at {pingalwada?.name || "Pingalwada"} 🤝
               </h2>
 
-              {/* Profile Image Upload */}
+              {/* Profile Image Upload (Optional) */}
               <div className="text-center mb-4">
                 <div
-                  className={`rounded-circle border d-inline-block overflow-hidden ${
-                    !image ? "border-danger" : ""
-                  }`}
+                  className="rounded-circle border d-inline-block overflow-hidden"
                   style={{
                     width: "120px",
                     height: "120px",
@@ -175,9 +178,7 @@ const Volunteer = () => {
                   )}
                 </div>
                 <p className="text-muted small mt-2">
-                  {image
-                    ? "Photo selected ✅"
-                    : "Click to add your photo (Required)"}
+                  {image ? "Photo selected ✅" : "Click to add your photo (Optional)"}
                 </p>
               </div>
 
@@ -237,38 +238,19 @@ const Volunteer = () => {
                 <Form.Group className="mb-3">
                   <Form.Label>Area of Interest</Form.Label>
                   <div>
-                    <Form.Check
-                      inline
-                      label="Teaching"
-                      type="checkbox"
-                      value="Teaching"
-                      checked={formData.interests.includes("Teaching")}
-                      onChange={handleCheckbox}
-                    />
-                    <Form.Check
-                      inline
-                      label="Fundraising"
-                      type="checkbox"
-                      value="Fundraising"
-                      checked={formData.interests.includes("Fundraising")}
-                      onChange={handleCheckbox}
-                    />
-                    <Form.Check
-                      inline
-                      label="Medical Help"
-                      type="checkbox"
-                      value="Medical Help"
-                      checked={formData.interests.includes("Medical Help")}
-                      onChange={handleCheckbox}
-                    />
-                    <Form.Check
-                      inline
-                      label="Event Management"
-                      type="checkbox"
-                      value="Event Management"
-                      checked={formData.interests.includes("Event Management")}
-                      onChange={handleCheckbox}
-                    />
+                    {["Teaching", "Fundraising", "Medical Help", "Event Management"].map(
+                      (interest, idx) => (
+                        <Form.Check
+                          key={idx}
+                          inline
+                          label={interest}
+                          type="checkbox"
+                          value={interest}
+                          checked={formData.interests.includes(interest)}
+                          onChange={handleCheckbox}
+                        />
+                      )
+                    )}
                   </div>
                 </Form.Group>
 

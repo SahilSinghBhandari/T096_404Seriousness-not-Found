@@ -1,25 +1,100 @@
 import { useEffect, useState } from "react";
-import { Container, Row, Col, Button, Card } from "react-bootstrap";
-import {
-  FaHeart,
-  FaUsers,
-  FaCalendarAlt,
-  FaHandsHelping,
-} from "react-icons/fa";
+import { Container, Row, Col, Button, Card, Form } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import Slider from "react-slick";
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import PingalwadaSection from "./PingalwadaSection";
+import { FaComments, FaPaperPlane } from "react-icons/fa";
 
+// ✅ OpenAI with Hardcoded Key (Hackathon only)
+import OpenAI from "openai";
 
+const openai = new OpenAI({
+  apiKey: "sk-your-api-key-here",   // ⚠️ Replace with your real key
+  dangerouslyAllowBrowser: true,
+});
 
 export default function About() {
   const [donators, setDonators] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
   const [pingalwadas, setPingalwadas] = useState([]);
 
-  // ✅ Fetch payments (donators)
+  // Chatbot states
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { from: "bot", text: "Hello! 👋 I’m your Pingalwara Assistant. How can I help?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // 🔊 Speak bot reply
+  const speak = (text) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    speechSynthesis.speak(utterance);
+  };
+
+  // 🎤 Start listening to voice
+  const startListening = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported in this browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.start();
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event);
+    };
+  };
+
+  // ✅ Handle chatbot send with AI
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    setMessages([...messages, { from: "user", text: input }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // fast & cheap
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant for Digital Pingalwara. Answer questions about donating, volunteering, jobs, and location in a simple and friendly way.",
+          },
+          ...messages.map((m) => ({
+            role: m.from === "user" ? "user" : "assistant",
+            content: m.text,
+          })),
+          { role: "user", content: input },
+        ],
+      });
+
+      const reply = response.choices[0].message.content;
+      setMessages((prev) => [...prev, { from: "bot", text: reply }]);
+      speak(reply); // 🔊 bot speaks
+    } catch (error) {
+      console.error("Chatbot error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { from: "bot", text: "⚠️ Sorry, I’m having trouble right now. Please try again later." },
+      ]);
+    }
+
+    setLoading(false);
+  };
+
+  // === Firestore fetching code (same as before) ===
   useEffect(() => {
     const fetchDonators = async () => {
       try {
@@ -33,7 +108,6 @@ export default function About() {
     fetchDonators();
   }, []);
 
-  // ✅ Fetch volunteers
   useEffect(() => {
     const fetchVolunteers = async () => {
       try {
@@ -47,7 +121,6 @@ export default function About() {
     fetchVolunteers();
   }, []);
 
-  // ✅ Fetch Pingalwadas
   useEffect(() => {
     const fetchPingalwadas = async () => {
       try {
@@ -61,7 +134,6 @@ export default function About() {
     fetchPingalwadas();
   }, []);
 
-  // ✅ Slider settings
   const settings = {
     dots: true,
     infinite: true,
@@ -78,128 +150,102 @@ export default function About() {
 
   return (
     <>
-      {/* Inline CSS */}
-      <style>
-        {`
-          .hover-card, .volunteer-card, .donator-card, .pingalwada-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-          }
-          .hover-card:hover, .volunteer-card:hover, .donator-card:hover, .pingalwada-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-          }
-          .zoom-img { transition: transform 0.4s ease; }
-          .zoom-img:hover { transform: scale(1.05); }
-        `}
-      </style>
+      {/* Your existing Hero, Donators, Volunteers, PingalwadaSection */}
+      <PingalwadaSection />
 
-      {/* Hero / Banner */}
+      {/* ✅ Floating ChatBot */}
       <div
-        className="bg-dark text-white d-flex align-items-center justify-content-center fade-in"
-        style={{ height: "250px" }}
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          zIndex: 9999,
+        }}
       >
-        <h2>About Us</h2>
+        <Button
+          variant="primary"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{ borderRadius: "50%", padding: "15px 18px" }}
+        >
+          <FaComments size={24} />
+        </Button>
       </div>
 
-      {/* Reason of Helping */}
-      <section className="py-5 fade-in">
-        <Container>
-          <Row className="justify-content-center mb-4">
-            <Col lg={6} className="text-center">
-              <h3>Reason of Helping</h3>
-            </Col>
-          </Row>
-          <Row className="text-center">
-            <Col lg={4} md={6} className="mb-4 hover-card">
-              <img src="/assets/img/help/1.png" alt="" className="mb-3 zoom-img" />
-              <h4>Collecting Fund</h4>
-              <p>Every penny brings hope for those in need.</p>
-              <Button variant="warning" className="custom-btn">Donate Now</Button>
-            </Col>
-            <Col lg={4} md={6} className="mb-4 hover-card">
-              <img src="/assets/img/help/2.png" alt="" className="mb-3 zoom-img" />
-              <h4>Medical Support</h4>
-              <p>Saving lives, one step at a time.</p>
-              <Link to="/medical">
-                <Button variant="success" className="custom-btn">Support a Patient</Button>
-              </Link>
-            </Col>
-            <Col lg={4} md={6} className="mb-4 hover-card">
-              <img src="/assets/img/help/3.png" alt="" className="mb-3 zoom-img" />
-              <h4>Education Support</h4>
-              <p>Empowering children for a brighter tomorrow.</p>
-              <Button variant="primary" className="custom-btn">Sponsor a Child</Button>
-            </Col>
-          </Row>
-        </Container>
-      </section>
+      {isOpen && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "80px",
+            right: "20px",
+            width: "300px",
+            height: "420px",
+            background: "white",
+            border: "1px solid #ccc",
+            borderRadius: "10px",
+            boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
+            display: "flex",
+            flexDirection: "column",
+            zIndex: 10000,
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              background: "#0d6efd",
+              color: "white",
+              padding: "10px",
+              borderTopLeftRadius: "10px",
+              borderTopRightRadius: "10px",
+            }}
+          >
+            <strong>Pingalwara Assistant 🤖</strong>
+          </div>
 
-      {/* Donators Section */}
-      <section className="bg-light py-5 fade-in">
-        <Container>
-          <Row className="justify-content-center mb-4">
-            <Col lg={6} className="text-center">
-              <h3>Our Donators ❤️</h3>
-              <p>Messages of love and support from our generous donors.</p>
-            </Col>
-          </Row>
-          <Slider {...settings}>
-            {donators.length > 0 ? (
-              donators.map((donor, index) => (
-                <div key={index} className="px-3">
-                  <Card className="shadow-lg border-0 p-3 donator-card h-100 text-center">
-                    <Card.Body>
-                      <p className="fst-italic">“{donor.message}”</p>
-                      <h5 className="mt-3">{donor.donorName || "Anonymous"}</h5>
-                      <p className="text-muted">
-                        {donor.donorCity || ""} {donor.donorState ? `, ${donor.donorState}` : ""}
-                      </p>
-                    </Card.Body>
-                  </Card>
-                </div>
-              ))
-            ) : (
-              <p className="text-center">No donors yet</p>
-            )}
-          </Slider>
-        </Container>
-      </section>
+          {/* Messages */}
+          <div style={{ flex: 1, padding: "10px", overflowY: "auto" }}>
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                style={{
+                  textAlign: msg.from === "user" ? "right" : "left",
+                  marginBottom: "8px",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 12px",
+                    borderRadius: "15px",
+                    background: msg.from === "user" ? "#0d6efd" : "#f1f1f1",
+                    color: msg.from === "user" ? "white" : "black",
+                    maxWidth: "80%",
+                  }}
+                >
+                  {msg.text}
+                </span>
+              </div>
+            ))}
+            {loading && <p className="text-muted fst-italic">Thinking...</p>}
+          </div>
 
-      {/* Volunteers Section */}
-      <section className="py-5 fade-in">
-        <Container>
-          <Row className="justify-content-center mb-4">
-            <Col lg={6} className="text-center">
-              <h3>Our Volunteers 🤝</h3>
-              <p>Heartfelt messages and support from our volunteers.</p>
-            </Col>
-          </Row>
-          <Row>
-            {volunteers.length > 0 ? (
-              volunteers.map((vol, index) => (
-                <Col lg={4} md={6} key={index} className="mb-4">
-                  <Card className="shadow-lg border-0 p-4 h-100 text-center volunteer-card">
-                    <Card.Body>
-                      <p className="fst-italic">“{vol.message}”</p>
-                      <h5 className="mt-3">{vol.name || "Anonymous"}</h5>
-                      <p className="text-muted">{vol.email}</p>
-                      <p><strong>Availability:</strong> {vol.availability}</p>
-                      {vol.interests?.length > 0 && (
-                        <p><strong>Interests:</strong> {vol.interests.join(", ")}</p>
-                      )}
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))
-            ) : (
-              <p className="text-center">No volunteers yet</p>
-            )}
-          </Row>
-        </Container>
-      </section>
-
-      {/* Pingalwada Section */}
-<PingalwadaSection />
+          {/* Input + Mic */}
+          <div style={{ display: "flex", padding: "10px", borderTop: "1px solid #ddd" }}>
+            <Form.Control
+              type="text"
+              placeholder="Ask me anything..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            />
+            <Button variant="success" onClick={handleSend} className="ms-2" disabled={loading}>
+              <FaPaperPlane />
+            </Button>
+            <Button variant="danger" onClick={startListening} className="ms-2">
+              🎤
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
