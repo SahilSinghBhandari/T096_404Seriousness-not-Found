@@ -92,7 +92,7 @@ export default function Header() {
               </Nav.Link>
               <Nav.Link
                 as={Link}
-                to="/jobs"
+                to="/job"
                 className="fw-semibold px-3 text-white nav-link-custom"
               >
                 Jobs

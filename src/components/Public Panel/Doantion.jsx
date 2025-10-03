@@ -1,6 +1,5 @@
-// src/components/Public Pannel/Donation.jsx
-import React, { useState } from "react";
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Card, Form, Button, Alert } from "react-bootstrap";
 import { db } from "../../firebase";
 import {
   doc,
@@ -22,14 +21,13 @@ const Donation = () => {
   const [state, setState] = useState("");
   const [city, setCity] = useState("");
   const [profilePic, setProfilePic] = useState(null);
-  const [loading, setLoading] = useState(false); // ✅ spinner state
 
   const nav = useNavigate();
   const location = useLocation();
-  const pingalwada = location.state; 
+  const pingalwada = location.state;
   const storage = getStorage();
 
-  // ✅ Reset form
+  // ✅ Reset form fields
   const resetForm = () => {
     setAmount("");
     setName("");
@@ -39,6 +37,11 @@ const Donation = () => {
     setCity("");
     setProfilePic(null);
   };
+
+  // ✅ Reset every time Donation page loads
+  useEffect(() => {
+    resetForm();
+  }, []);
 
   // ✅ Upload profile picture
   const uploadProfilePic = async (docId) => {
@@ -56,7 +59,7 @@ const Donation = () => {
 
   const handlePayment = async () => {
     if (!amount || !name || !email || !message) {
-      alert("Please fill all required fields including message.");
+      alert("⚠️ Please fill all required fields including message.");
       return;
     }
 
@@ -65,9 +68,7 @@ const Donation = () => {
       return;
     }
 
-    setLoading(true);
-
-
+    // Step 1: Create initial Firestore doc
     let createdDocRef = null;
     try {
       const paymentsCol = collection(db, "payments");
@@ -87,16 +88,15 @@ const Donation = () => {
       createdDocRef = initDoc;
     } catch (err) {
       console.error("Error creating initial payment doc:", err);
-      toast.error("Could not initialize payment. Try again.");
-      setLoading(false);
+      toast.error("❌ Could not initialize payment. Try again.");
       return;
     }
 
     const docId = createdDocRef.id;
 
-
+    // Step 2: Razorpay checkout
     const options = {
-      key: "rzp_test_ROv4afGSGZTaUy",
+      key: pingalwada.razorpayKey || "rzp_test_ROv4afGSGZTaUy",
       amount: Number(amount) * 100,
       currency: "INR",
       name: pingalwada.name,
@@ -131,21 +131,19 @@ const Donation = () => {
 
           toast.success("🎉 Payment successful!");
           setSubmitted(true);
-          resetForm();
+
+          resetForm(); // ✅ clear before navigating
           nav("/thankyou");
         } catch (err) {
           console.error("Error in payment handler:", err);
-          toast.error("Payment succeeded, but saving failed.");
-        } finally {
-          setLoading(false); // ✅ stop spinner
+          toast.error("✅ Payment succeeded, but saving failed.");
         }
       },
 
       modal: {
         ondismiss: () => {
-          toast.info("Payment cancelled by user.");
-          resetForm();
-          setLoading(false); // ✅ stop spinner if user cancels
+          toast.info("ℹ️ Payment cancelled by user.");
+          resetForm(); // ✅ clear on cancel
         },
       },
     };
@@ -155,9 +153,7 @@ const Donation = () => {
       rzp.open();
     } catch (err) {
       console.error("Razorpay open error:", err);
-      toast.error("Unable to open payment checkout.");
-      resetForm();
-      setLoading(false); // ✅ stop spinner on error
+      toast.error("❌ Unable to open payment checkout.");
     }
   };
 
@@ -187,7 +183,7 @@ const Donation = () => {
                   dismissible
                   onClose={() => setSubmitted(false)}
                 >
-                  🎉 Thank you for your generous donation, {name}!
+                  🎉 Thank you for your generous donation!
                 </Alert>
               )}
 
@@ -260,6 +256,22 @@ const Donation = () => {
                   )}
                 </Form.Group>
 
+                {/* ✅ Quick Select Donation Buttons */}
+                <Form.Group className="mb-3">
+                  <Form.Label>Choose Quick Amount</Form.Label>
+                  <div className="d-flex gap-2 mb-2">
+                    {[100, 500, 1000].map((amt) => (
+                      <Button
+                        key={amt}
+                        variant={amount === String(amt) ? "success" : "outline-success"}
+                        onClick={() => setAmount(String(amt))}
+                      >
+                        ₹{amt}
+                      </Button>
+                    ))}
+                  </div>
+                </Form.Group>
+
                 <Form.Group className="mb-3">
                   <Form.Label>Donation Amount (₹) *</Form.Label>
                   <Form.Control
@@ -283,24 +295,8 @@ const Donation = () => {
                 </Form.Group>
 
                 <div className="d-grid">
-                  <Button
-                    variant="success"
-                    size="lg"
-                    onClick={handlePayment}
-                    disabled={loading} // disable button while loading
-                  >
-                    {loading ? (
-                      <>
-                        <Spinner
-                          animation="border"
-                          size="sm"
-                          className="me-2"
-                        />
-                        Processing...
-                      </>
-                    ) : (
-                      "Donate Now 💝"
-                    )}
+                  <Button variant="success" size="lg" onClick={handlePayment}>
+                    Donate Now 💝
                   </Button>
                 </div>
               </Form>

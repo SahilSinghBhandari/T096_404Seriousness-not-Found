@@ -80,6 +80,7 @@ import Dashboard from "./components/admin/Dashboard";
 import PingalwadaAdminPanel from "./components/Pingalwada/PingalwadaAdminPanel";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css"; // ✅ import styles
+import Jobs from "./components/Public Panel/jobs";
 
 function App() {
   return (
@@ -94,10 +95,11 @@ function App() {
             <Route path="/thankyou" element={<ThankYou />} />
             <Route path="/volunteer" element={<Volunter />} />
             <Route path="/medical" element={<Medical />} />
+            <Route path="/job" element={<Jobs/>} />
             <Route path="/pingalwada-admin" element={<PingalwadaAdminPanel />} />
           </Route>
 
-          {/* ✅ Auth routes WITHOUT Navbar */}
+      
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 

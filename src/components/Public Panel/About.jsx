@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Button, Card, Form } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { FaComments, FaPaperPlane } from "react-icons/fa";
 import Slider from "react-slick";
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import PingalwadaSection from "./PingalwadaSection";
-import { FaComments, FaPaperPlane } from "react-icons/fa";
 
-// ✅ OpenAI with Hardcoded Key (Hackathon only)
+// OpenAI chatbot
 import OpenAI from "openai";
-
 const openai = new OpenAI({
-  apiKey: "sk-your-api-key-here",   // ⚠️ Replace with your real key
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY, 
   dangerouslyAllowBrowser: true,
 });
 
@@ -23,7 +21,7 @@ export default function About() {
   // Chatbot states
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { from: "bot", text: "Hello! 👋 I’m your Pingalwara Assistant. How can I help?" }
+    { from: "bot", text: "Hello! 👋 I’m your Pingalwara Assistant. How can I help?" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,11 +64,12 @@ export default function About() {
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // fast & cheap
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "You are a helpful assistant for Digital Pingalwara. Answer questions about donating, volunteering, jobs, and location in a simple and friendly way.",
+            content:
+              "You are a helpful assistant for Digital Pingalwara. Answer questions about donating, volunteering, jobs, and location in a simple and friendly way.",
           },
           ...messages.map((m) => ({
             role: m.from === "user" ? "user" : "assistant",
@@ -82,7 +81,7 @@ export default function About() {
 
       const reply = response.choices[0].message.content;
       setMessages((prev) => [...prev, { from: "bot", text: reply }]);
-      speak(reply); // 🔊 bot speaks
+      speak(reply);
     } catch (error) {
       console.error("Chatbot error:", error);
       setMessages((prev) => [
@@ -94,7 +93,7 @@ export default function About() {
     setLoading(false);
   };
 
-  // === Firestore fetching code (same as before) ===
+  // === Firestore fetching code ===
   useEffect(() => {
     const fetchDonators = async () => {
       try {
@@ -134,6 +133,7 @@ export default function About() {
     fetchPingalwadas();
   }, []);
 
+  // ✅ Carousel settings
   const settings = {
     dots: true,
     infinite: true,
@@ -148,10 +148,69 @@ export default function About() {
     ],
   };
 
+  // ✅ Static Projects Section Data
+  const projects = [
+    {
+      title: "Patients",
+      image: "./assets/img/p.jpg",
+      description:
+        "At present there are over 1804 patients who are destitute and most of them are going to spend their entire life in Pingalwara.",
+      points: ["8 Branches", "Old Age Home", "Play Room", "Sensory Room"],
+    },
+    {
+      title: "Education",
+      image: "./assets/img/e.png",
+      description:
+        "Pingalwara provides education to 775 poor and needy slum-dwelling children from nearby villages.",
+      points: ["Free Education", "Free Books & Uniform", "Free Transport", "100% Result"],
+    },
+    {
+      title: "Medical Facilities",
+      image: "./assets/img/h.jpg",
+      description:
+        "A medical laboratory and dispensary has been established for the treatment of patients.",
+      points: ["Dispensary & Lab", "Dental Clinic", "Operation Theatre", "Homeopathy"],
+    },
+    {
+      title: "Printing Press",
+      image: "./assets/img/cel.jpg",
+      description:
+        "Puran Printing Press provides free literature regarding Religion, Social Issues, Economics, Heritage & Health.",
+      points: ["50,000 pages/day", "80 Books Annually", "Expenditure: Rs. 3.80 crore"],
+    },
+  ];
+
   return (
     <>
-      {/* Your existing Hero, Donators, Volunteers, PingalwadaSection */}
+      {/* ✅ Existing Pingalwada Section */}
       <PingalwadaSection />
+
+      {/* ✅ OUR PROJECTS SECTION */}
+      <Container className="py-5">
+        <h2 className="text-center text-white bg-primary py-2 mb-4 rounded">OUR PROJECTS</h2>
+        <Row>
+          {projects.map((project, idx) => (
+            <Col md={6} lg={3} key={idx} className="mb-4">
+              <Card className="h-100 shadow-sm">
+                <Card.Img
+                  variant="top"
+                  src={project.image}
+                  style={{ height: "200px", objectFit: "cover" }}
+                />
+                <Card.Body>
+                  <Card.Title className="text-primary">{project.title}</Card.Title>
+                  <Card.Text>{project.description}</Card.Text>
+                  <ul>
+                    {project.points.map((point, i) => (
+                      <li key={i}>{point}</li>
+                    ))}
+                  </ul>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Container>
 
       {/* ✅ Floating ChatBot */}
       <div

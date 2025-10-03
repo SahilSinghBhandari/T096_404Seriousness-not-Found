@@ -16,7 +16,7 @@ import Webcam from "react-webcam";
 
 // Firebase
 import { db } from "../../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { useLocation } from "react-router-dom";
 
@@ -76,7 +76,7 @@ const Volunteer = () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
-  // ✅ Submit form (store in root-level volunteers collection)
+  // ✅ Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -85,7 +85,7 @@ const Volunteer = () => {
       !formData.email ||
       !formData.phone ||
       !formData.availability ||
-      !formData.message // ✅ mandatory
+      !formData.message
     ) {
       toast.warn("⚠️ Please fill all required fields including your message.");
       return;
@@ -100,31 +100,36 @@ const Volunteer = () => {
 
     try {
       let imageUrl = "";
-      if (image) {
-        // ✅ Upload image to Firebase Storage (optional)
-        const storage = getStorage();
-        const storageRef = ref(
-          storage,
-          `volunteers/${pingalwada.id}-${Date.now()}.jpg`
-        );
-        await uploadString(storageRef, image, "data_url");
-        imageUrl = await getDownloadURL(storageRef);
-      }
 
-      // ✅ Store volunteer details in Firestore root collection "volunteers"
-      await addDoc(collection(db, "volunteers"), {
+      // Step 1: Create Firestore doc with `status: pending`
+      const volunteerRef = await addDoc(collection(db, "volunteers"), {
         ...formData,
-        imageUrl, // only store URL if uploaded
+        imageUrl: "", // placeholder
         pingalwadaId: pingalwada.id,
         pingalwadaName: pingalwada.name,
+        status: "pending", // 👈 important for admin action
         createdAt: serverTimestamp(),
       });
 
+      // Step 2: Upload photo if exists
+      if (image) {
+        const storage = getStorage();
+        const storageRef = ref(
+          storage,
+          `volunteers/${volunteerRef.id}-${Date.now()}.jpg`
+        );
+        await uploadString(storageRef, image, "data_url");
+        imageUrl = await getDownloadURL(storageRef);
+
+        // Update Firestore with photo URL
+        await updateDoc(doc(db, "volunteers", volunteerRef.id), { imageUrl });
+      }
+
       setLoading(false);
       setSubmitted(true);
-      toast.success("🎉 Volunteer registered successfully!");
+      toast.success("🎉 Volunteer application submitted! Awaiting admin approval.");
 
-      // Reset form
+      // ✅ Reset form
       setFormData({
         name: "",
         email: "",
@@ -151,7 +156,7 @@ const Volunteer = () => {
                 Volunteer at {pingalwada?.name || "Pingalwada"} 🤝
               </h2>
 
-              {/* Profile Image Upload (Optional) */}
+              {/* Profile Image Upload */}
               <div className="text-center mb-4">
                 <div
                   className="rounded-circle border d-inline-block overflow-hidden"
@@ -192,7 +197,6 @@ const Volunteer = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required
                   />
                 </Form.Group>
 
@@ -204,7 +208,6 @@ const Volunteer = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
                   />
                 </Form.Group>
 
@@ -216,7 +219,6 @@ const Volunteer = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    required
                   />
                 </Form.Group>
 
@@ -226,7 +228,6 @@ const Volunteer = () => {
                     name="availability"
                     value={formData.availability}
                     onChange={handleChange}
-                    required
                   >
                     <option value="">-- Select Availability --</option>
                     <option value="Weekdays">Weekdays</option>
@@ -263,17 +264,11 @@ const Volunteer = () => {
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    required
                   />
                 </Form.Group>
 
                 <div className="d-grid">
-                  <Button
-                    type="submit"
-                    variant="success"
-                    size="lg"
-                    disabled={loading}
-                  >
+                  <Button type="submit" variant="success" size="lg" disabled={loading}>
                     {loading ? (
                       <Spinner animation="border" size="sm" />
                     ) : (
@@ -286,7 +281,7 @@ const Volunteer = () => {
           ) : (
             <Alert variant="success" className="text-center p-5 shadow-lg">
               <h3>🎉 Thank you for registering as a Volunteer!</h3>
-              <p>We will get in touch with you shortly.</p>
+              <p>Your application is submitted. It will be visible after admin approval.</p>
               <Button variant="primary" onClick={() => setSubmitted(false)}>
                 Register Another Volunteer
               </Button>

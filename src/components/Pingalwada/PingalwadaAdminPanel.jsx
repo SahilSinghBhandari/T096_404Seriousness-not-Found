@@ -1,205 +1,126 @@
-// src/components/Admin/AdminPanel.jsx
-import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Table,
-  Form,
-  Card,
-  Modal,
-} from "react-bootstrap";
-import { signOut, createUserWithEmailAndPassword } from "firebase/auth";
+import React, { useEffect, useState, useRef } from "react";
+import { Container, Button, Table, Card, Modal, Form } from "react-bootstrap";
+import { signOut } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import {
   collection,
   getDocs,
-  addDoc,
-  setDoc,
   doc,
+  updateDoc,
+  addDoc,
   deleteDoc,
   serverTimestamp,
-  query,
-  where,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("home");
-  const [users, setUsers] = useState([]);
-  const [donors, setDonors] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
-  const [pingalwadas, setPingalwadas] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-
-  // Pingalwada form data
-  const [formData, setFormData] = useState({
-    name: "",
-    location: "",
-    contactPerson: "",
-    phone: "",
-    managerEmail: "",
-    managerPassword: "",
-    capacity: "",
-    services: [],
+  const [jobs, setJobs] = useState([]);
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [jobData, setJobData] = useState({
+    title: "",
+    category: "",
     description: "",
-    cloudinaryId: "",
-    razorpayKey: "",
+    location: "",
+    time: "",
+    skills: "",
   });
 
   const nav = useNavigate();
-
-  // ✅ Fetch Users (exclude main admins)
-  const fetchUsers = async () => {
-    const querySnapshot = await getDocs(collection(db, "users"));
-    const allUsers = querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setUsers(allUsers.filter((u) => u.role !== "admin"));
-  };
-
-  // ✅ Fetch Donors
-  const fetchDonors = async () => {
-    const querySnapshot = await getDocs(collection(db, "donors"));
-    setDonors(querySnapshot.docs.map((doc) => doc.data()));
-  };
+  const statusesFixedRef = useRef(false);
 
   // ✅ Fetch Volunteers
   const fetchVolunteers = async () => {
-    const querySnapshot = await getDocs(collection(db, "volunteers"));
-    setVolunteers(querySnapshot.docs.map((doc) => doc.data()));
+    try {
+      const snapshot = await getDocs(collection(db, "volunteers"));
+      const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setVolunteers(list);
+
+      if (!statusesFixedRef.current) {
+        const missing = list.filter((v) => !v.status);
+        if (missing.length > 0) {
+          const updates = missing.map((v) =>
+            updateDoc(doc(db, "volunteers", v.id), { status: "pending" })
+          );
+          await Promise.all(updates);
+          statusesFixedRef.current = true;
+          fetchVolunteers();
+        } else {
+          statusesFixedRef.current = true;
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching volunteers:", err);
+      toast.error("Failed to fetch volunteers.");
+    }
   };
 
-  // ✅ Fetch Pingalwadas
-  const fetchPingalwadas = async () => {
-    const querySnapshot = await getDocs(collection(db, "pingalwada"));
-    setPingalwadas(querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+  // ✅ Fetch Jobs
+  const fetchJobs = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "volunteer_jobs"));
+      const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setJobs(list);
+    } catch (err) {
+      console.error("Error fetching jobs:", err);
+      toast.error("Failed to fetch jobs.");
+    }
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchDonors();
     fetchVolunteers();
-    fetchPingalwadas();
+    fetchJobs();
   }, []);
 
-  // ✅ Handle Input Change
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // ✅ Handle Checkbox
-  const handleCheckbox = (e) => {
-    const { value, checked } = e.target;
-    let updated = [...formData.services];
-    if (checked) {
-      updated.push(value);
-    } else {
-      updated = updated.filter((s) => s !== value);
+  // ✅ Approve Volunteer
+  const handleVolunteerStatus = async (id) => {
+    try {
+      await updateDoc(doc(db, "volunteers", id), { status: "approved" });
+      toast.success("Volunteer approved ✅");
+      fetchVolunteers();
+    } catch (err) {
+      toast.error("Error approving volunteer");
+      console.error(err);
     }
-    setFormData({ ...formData, services: updated });
   };
 
-  // ✅ Add New Pingalwada
-  const handleAddPingalwada = async (e) => {
+  // ✅ Add Job
+  const handleAddJob = async (e) => {
     e.preventDefault();
-    if (
-      !formData.name ||
-      !formData.location ||
-      !formData.phone ||
-      !formData.cloudinaryId ||
-      !formData.managerEmail ||
-      !formData.managerPassword ||
-      !formData.razorpayKey
-    ) {
-      toast.error("Please fill all required fields");
-      return;
-    }
     try {
-      // Add Pingalwada to Firestore
-      const pingalwadaRef = await addDoc(collection(db, "pingalwada"), {
-        ...formData,
+      await addDoc(collection(db, "volunteer_jobs"), {
+        ...jobData,
         createdAt: serverTimestamp(),
       });
-
-      // Create Firebase Auth account for Manager
-      const userCred = await createUserWithEmailAndPassword(
-        auth,
-        formData.managerEmail,
-        formData.managerPassword
-      );
-
-      // Add Manager user in Firestore
-      await setDoc(doc(db, "users", userCred.user.uid), {
-        uid: userCred.user.uid,
-        email: formData.managerEmail,
-        role: "pingalwada-admin",
-        pingalwadaId: pingalwadaRef.id,
-        createdAt: serverTimestamp(),
-      });
-
-      toast.success("✅ Pingalwada & Manager added successfully!");
-      setFormData({
-        name: "",
-        location: "",
-        contactPerson: "",
-        phone: "",
-        managerEmail: "",
-        managerPassword: "",
-        capacity: "",
-        services: [],
+      toast.success("Job added ✅");
+      setShowJobModal(false);
+      setJobData({
+        title: "",
+        category: "",
         description: "",
-        cloudinaryId: "",
-        razorpayKey: "",
+        location: "",
+        time: "",
+        skills: "",
       });
-      setShowForm(false);
-      fetchPingalwadas();
-      fetchUsers();
-    } catch (error) {
-      toast.error("❌ Error adding Pingalwada");
-      console.error(error);
+      fetchJobs();
+    } catch (err) {
+      toast.error("Error adding job");
+      console.error(err);
     }
   };
 
-  // ✅ Delete Pingalwada AND its Manager
-  const handleDeletePingalwada = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this Pingalwada and its Manager?")) return;
+  // ✅ Delete Job
+  const handleDeleteJob = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
     try {
-      // 1. Find linked manager
-      const q = query(
-        collection(db, "users"),
-        where("pingalwadaId", "==", id),
-        where("role", "==", "pingalwada-admin")
-      );
-      const managerSnap = await getDocs(q);
-
-      // 2. Delete manager user(s)
-      for (let m of managerSnap.docs) {
-        await deleteDoc(doc(db, "users", m.id));
-      }
-
-      // 3. Delete the Pingalwada
-      await deleteDoc(doc(db, "pingalwada", id));
-
-      toast.success("✅ Pingalwada and its Manager deleted successfully");
-      fetchPingalwadas();
-      fetchUsers();
-    } catch (error) {
-      toast.error("❌ Error deleting Pingalwada or Manager");
-      console.error(error);
-    }
-  };
-
-  // ✅ Delete User
-  const handleDeleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this User?")) return;
-    try {
-      await deleteDoc(doc(db, "users", id));
-      toast.success("✅ User deleted successfully");
-      fetchUsers();
-    } catch (error) {
-      toast.error("❌ Error deleting User");
-      console.error(error);
+      await deleteDoc(doc(db, "volunteer_jobs", id));
+      toast.success("Job deleted ✅");
+      fetchJobs();
+    } catch (err) {
+      toast.error("Error deleting job");
+      console.error(err);
     }
   };
 
@@ -235,15 +156,6 @@ export default function AdminPanel() {
           </li>
           <li>
             <Button
-              variant={activeTab === "donors" ? "light" : "outline-light"}
-              className="w-100 mb-2"
-              onClick={() => setActiveTab("donors")}
-            >
-              Donors
-            </Button>
-          </li>
-          <li>
-            <Button
               variant={activeTab === "volunteers" ? "light" : "outline-light"}
               className="w-100 mb-2"
               onClick={() => setActiveTab("volunteers")}
@@ -253,11 +165,11 @@ export default function AdminPanel() {
           </li>
           <li>
             <Button
-              variant={activeTab === "pingalwada" ? "light" : "outline-light"}
+              variant={activeTab === "jobs" ? "light" : "outline-light"}
               className="w-100 mb-2"
-              onClick={() => setActiveTab("pingalwada")}
+              onClick={() => setActiveTab("jobs")}
             >
-              Pingalwada
+              Jobs
             </Button>
           </li>
           <li>
@@ -274,69 +186,7 @@ export default function AdminPanel() {
 
       {/* Content */}
       <div className="flex-grow-1 p-4 bg-light">
-        {/* Home Tab */}
-        {activeTab === "home" && (
-          <Card className="p-3 shadow-sm border-0">
-            <h3 className="mb-3 text-primary">All Users</h3>
-            <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u, i) => (
-                  <tr key={i}>
-                    <td>{u.email}</td>
-                    <td>{u.role}</td>
-                    <td>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteUser(u.id)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card>
-        )}
-
-        {/* Donors */}
-        {activeTab === "donors" && (
-          <Card className="p-3 shadow-sm border-0">
-            <h3 className="mb-3 text-primary">Donors</h3>
-            <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Location</th>
-                  <th>Total Donations</th>
-                  <th>Total Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {donors.map((d, i) => (
-                  <tr key={i}>
-                    <td>{d.donorName}</td>
-                    <td>{d.donorEmail}</td>
-                    <td>{d.donorLocation}</td>
-                    <td>{d.totalDonations}</td>
-                    <td>₹{d.totalAmount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card>
-        )}
-
-        {/* Volunteers */}
+        {/* Volunteers Section */}
         {activeTab === "volunteers" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">Volunteers</h3>
@@ -347,52 +197,84 @@ export default function AdminPanel() {
                   <th>Email</th>
                   <th>Phone</th>
                   <th>Skills</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {volunteers.map((v, i) => (
-                  <tr key={i}>
-                    <td>{v.name}</td>
-                    <td>{v.email}</td>
-                    <td>{v.phone}</td>
-                    <td>{v.interests?.join(", ")}</td>
-                  </tr>
-                ))}
+                {volunteers.map((v) => {
+                  const status = v.status || "pending";
+                  return (
+                    <tr key={v.id}>
+                      <td>{v.name}</td>
+                      <td>{v.email}</td>
+                      <td>{v.phone}</td>
+                      <td>{v.interests?.join(", ")}</td>
+                      <td>
+                        <span
+                          className={
+                            status === "approved"
+                              ? "text-success fw-bold"
+                              : "text-warning fw-bold"
+                          }
+                        >
+                          {status}
+                        </span>
+                      </td>
+                      <td>
+                        {status === "pending" ? (
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleVolunteerStatus(v.id)}
+                          >
+                            Approve
+                          </Button>
+                        ) : (
+                          <span className="text-success">Approved ✅</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </Card>
         )}
 
-        {/* Pingalwada */}
-        {activeTab === "pingalwada" && (
+        {/* Jobs Section */}
+        {activeTab === "jobs" && (
           <Card className="p-3 shadow-sm border-0">
-            <h3 className="mb-3 text-primary">Pingalwada Management</h3>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h3 className="mb-0 text-success">Volunteer Jobs 💼</h3>
+              <Button onClick={() => setShowJobModal(true)}>+ Add Job</Button>
+            </div>
             <Table striped bordered hover responsive>
-              <thead className="table-primary">
+              <thead className="table-success">
                 <tr>
-                  <th>Name</th>
+                  <th>Title</th>
+                  <th>Category</th>
                   <th>Location</th>
-                  <th>Phone</th>
-                  <th>Services</th>
-                  <th>Capacity</th>
-                  <th>Razorpay Key</th>
+                  <th>Time</th>
+                  <th>Skills</th>
+                  <th>Description</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {pingalwadas.map((p, i) => (
-                  <tr key={i}>
-                    <td>{p.name}</td>
-                    <td>{p.location}</td>
-                    <td>{p.phone}</td>
-                    <td>{p.services?.join(", ")}</td>
-                    <td>{p.capacity}</td>
-                    <td>{p.razorpayKey}</td>
+                {jobs.map((job) => (
+                  <tr key={job.id}>
+                    <td>{job.title}</td>
+                    <td>{job.category}</td>
+                    <td>{job.location}</td>
+                    <td>{job.time}</td>
+                    <td>{job.skills}</td>
+                    <td>{job.description}</td>
                     <td>
                       <Button
                         variant="danger"
                         size="sm"
-                        onClick={() => handleDeletePingalwada(p.id)}
+                        onClick={() => handleDeleteJob(job.id)}
                       >
                         Delete
                       </Button>
@@ -404,6 +286,64 @@ export default function AdminPanel() {
           </Card>
         )}
       </div>
+
+      {/* Job Modal */}
+      <Modal show={showJobModal} onHide={() => setShowJobModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Add Volunteer Job</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleAddJob}>
+            <Form.Group className="mb-2">
+              <Form.Label>Title</Form.Label>
+              <Form.Control
+                value={jobData.title}
+                onChange={(e) => setJobData({ ...jobData, title: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Category</Form.Label>
+              <Form.Control
+                value={jobData.category}
+                onChange={(e) => setJobData({ ...jobData, category: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Location</Form.Label>
+              <Form.Control
+                value={jobData.location}
+                onChange={(e) => setJobData({ ...jobData, location: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Time Commitment</Form.Label>
+              <Form.Control
+                value={jobData.time}
+                onChange={(e) => setJobData({ ...jobData, time: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Skills Required</Form.Label>
+              <Form.Control
+                value={jobData.skills}
+                onChange={(e) => setJobData({ ...jobData, skills: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group className="mb-2">
+              <Form.Label>Description</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={2}
+                value={jobData.description}
+                onChange={(e) => setJobData({ ...jobData, description: e.target.value })}
+              />
+            </Form.Group>
+            <Button type="submit" variant="success" className="mt-2 w-100">
+              Add Job
+            </Button>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 }
