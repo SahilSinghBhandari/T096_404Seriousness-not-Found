@@ -8,7 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 export default function Header() {
   const [user, setUser] = useState(null);
-  const [userName, setUserName] = useState(""); 
+  const [userName, setUserName] = useState(""); // ✅ store registered name
   const nav = useNavigate();
 
   useEffect(() => {
@@ -79,6 +79,13 @@ export default function Header() {
                 className="fw-semibold px-3 text-white nav-link-custom"
               >
                 Donate
+              </Nav.Link>
+              <Nav.Link
+                as={Link}
+                to="/history"
+                className="fw-semibold px-3 text-white nav-link-custom"
+              >
+                Transaction History
               </Nav.Link>
               <Nav.Link
                 as={Link}

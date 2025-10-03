@@ -1,56 +1,69 @@
 import { useEffect, useState } from "react";
-import { Container, Row, Col, Button, Card, Form, Image, Modal } from "react-bootstrap";
+import { Container, Row, Col, Button, Card, Image, Modal } from "react-bootstrap";
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
+import { Link } from "react-router-dom"; 
 import PingalwadaSection from "./PingalwadaSection";
 
 export default function About() {
   const [pingalwadas, setPingalwadas] = useState([]);
   const [showVideo, setShowVideo] = useState(false);
 
-  // ✅ Fetch Pingalwadas
+  // ✅ Fetch Pingalwadas from Firestore
   useEffect(() => {
     const fetchPingalwadas = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "pingalwada"));
-        const data = querySnapshot.docs.map((doc) => doc.data());
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        console.log("✅ Pingalwada fetched:", data);
         setPingalwadas(data);
       } catch (error) {
-        console.error("Error fetching pingalwadas:", error);
+        console.error("🔥 Error fetching pingalwadas:", error);
       }
     };
     fetchPingalwadas();
   }, []);
 
-  // ✅ Project Data
+  // ✅ Static Projects Data
   const projects = [
     {
+      id: "patients",
       title: "Patients",
       image: "./assets/img/p.jpg",
       description:
         "At present there are over 1804 patients who are destitute and most of them are going to spend their entire life in Pingalwara.",
       points: ["8 Branches", "Old Age Home", "Play Room", "Sensory Room"],
+      location: "Amritsar",
     },
     {
+      id: "education",
       title: "Education",
       image: "./assets/img/e.png",
       description:
         "Pingalwara provides education to 775 poor and needy slum-dwelling children from nearby villages.",
       points: ["Free Education", "Free Books & Uniform", "Free Transport", "100% Result"],
+      location: "Amritsar",
     },
     {
+      id: "medical",
       title: "Medical Facilities",
       image: "./assets/img/h.jpg",
       description:
         "A medical laboratory and dispensary has been established for the treatment of patients.",
       points: ["Dispensary & Lab", "Dental Clinic", "Operation Theatre", "Homeopathy"],
+      location: "Amritsar",
     },
     {
+      id: "printing",
       title: "Printing Press",
       image: "./assets/img/cel.jpg",
       description:
         "Puran Printing Press provides free literature regarding Religion, Social Issues, Economics, Heritage & Health.",
       points: ["50,000 pages/day", "80 Books Annually", "Expenditure: Rs. 3.80 crore"],
+      location: "Amritsar",
     },
   ];
 
@@ -75,7 +88,11 @@ export default function About() {
                 <Button variant="success" size="lg">
                   Join Our Mission
                 </Button>
-                <Button variant="outline-success" size="lg" onClick={() => setShowVideo(true)}>
+                <Button
+                  variant="outline-success"
+                  size="lg"
+                  onClick={() => setShowVideo(true)}
+                >
                   🎬 Watch Story
                 </Button>
               </div>
@@ -150,8 +167,11 @@ export default function About() {
 
       {/* ✅ OUR PROJECTS SECTION */}
       <Container className="py-5">
-        <h2 className="text-center text-white bg-primary py-2 mb-4 rounded">OUR PROJECTS</h2>
+        <h2 className="text-center text-white bg-primary py-2 mb-4 rounded">
+          OUR PROJECTS
+        </h2>
         <Row>
+          {/* 🔹 Static Projects */}
           {projects.map((project, idx) => (
             <Col md={6} lg={3} key={idx} className="mb-4">
               <Card className="h-100 shadow-sm">
@@ -168,6 +188,47 @@ export default function About() {
                       <li key={i}>{point}</li>
                     ))}
                   </ul>
+                  <div className="d-grid mt-3">
+                    <Button
+                      as={Link}
+                      to="/donate"
+                      state={{
+                        id: project.id || "unknown",
+                        name: project.title || "Untitled",
+                        location: project.location || "Not Specified",
+                      }}
+                      variant="success"
+                    >
+                      Donate to {project.title}
+                    </Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+
+          {/* 🔹 Firestore Pingalwadas */}
+          {pingalwadas.map((pg) => (
+            <Col md={6} lg={3} key={pg.id} className="mb-4">
+              <Card className="h-100 shadow-sm">
+                <Card.Body>
+                  <Card.Title className="text-primary">{pg.name || "Unnamed Pingalwada"}</Card.Title>
+                  <Card.Text>{pg.description || "No description available."}</Card.Text>
+                  <div className="d-grid mt-3">
+                    <Button
+                      as={Link}
+                      to="/donate"
+                      state={{
+                        id: pg.id || "unknown",
+                        name: pg.name || "Pingalwada",
+                        location: pg.location || "Not Specified",
+                        razorpayKey: pg.razorpayKey || "rzp_test_RP9VlGnNBImdLC" // ✅ safe fallback
+                      }}
+                      variant="success"
+                    >
+                      Donate to {pg.name || "Pingalwada"}
+                    </Button>
+                  </div>
                 </Card.Body>
               </Card>
             </Col>

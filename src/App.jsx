@@ -12,6 +12,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Jobs from "./components/Public Panel/jobs";
 import Login from "./components/auth/login";
+import History from "./components/Public Panel/History";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/volunteer" element={<Volunter />} />
             <Route path="/medical" element={<Medical />} />
             <Route path="/job" element={<Jobs/>} />
+            <Route path="/history" element={<History/>} />
             <Route path="/pingalwada-admin" element={<PingalwadaAdminPanel />} />
           </Route>
 
