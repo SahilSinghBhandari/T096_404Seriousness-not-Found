@@ -12,7 +12,7 @@ export default function Footer() {
               <img src="/assets/img/footer_logo.png" alt="Logo" width="180" />
             </div>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.
+              Ashadeep is a humble initiative by Pingalwara to bring compassion, care, and service closer to those in need through the digital world. 
             </p>
             <div className="d-flex gap-3 fs-4">
               <a href="#" className="text-light"><FaFacebook /></a>
