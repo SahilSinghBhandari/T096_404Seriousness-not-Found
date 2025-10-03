@@ -34,7 +34,7 @@ const SmallStat = ({ value, label }) => (
 
 // ---------- Main Page ----------
 export default function MedicalSupportFull() {
-  // Donation form state
+  
   const [donation, setDonation] = useState({
     name: "",
     amount: "",
@@ -43,7 +43,6 @@ export default function MedicalSupportFull() {
   });
   const [donationMsg, setDonationMsg] = useState("");
 
-  // Volunteer form state
   const [volunteer, setVolunteer] = useState({
     name: "",
     email: "",
@@ -51,16 +50,14 @@ export default function MedicalSupportFull() {
   });
   const [volMsg, setVolMsg] = useState("");
 
-  // Chatbot
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { from: "bot", text: "Hi 👋 I'm CareBot. Ask me about donations, volunteering, or urgent needs." },
   ]);
 
-  // Real-time and derived data
   const [progressPercent, setProgressPercent] = useState(0);
   const [raisedAmount, setRaisedAmount] = useState(0);
-  const [goal] = useState(100000); // example target
+  const [goal] = useState(100000);
   const [stats, setStats] = useState({
     patients: 0,
     surgeries: 0,
@@ -70,14 +67,14 @@ export default function MedicalSupportFull() {
   const [urgentNeeds, setUrgentNeeds] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // Pie chart data (example distribution; ideally derived from real accounting)
+ 
   const [distribution, setDistribution] = useState({
     surgeries: 60,
     medicines: 30,
     admin: 10,
   });
 
-  // Animated counters (simple)
+  
   const animateTo = (target, setter, speed = 20) => {
     let current = 0;
     const interval = setInterval(() => {
@@ -91,13 +88,13 @@ export default function MedicalSupportFull() {
     }, 40);
   };
 
-  // ---------- Firestore listeners ----------
+
   useEffect(() => {
-    // Donations collection snapshot -> calculate raised amounts + leaderboard
+    
     const donationsCol = collection(db, "donations");
     const unsub = onSnapshot(donationsCol, (snapshot) => {
       let total = 0;
-      const donorsMap = {}; // aggregate by name to create leaderboard
+      const donorsMap = {}; 
       snapshot.forEach((doc) => {
         const data = doc.data();
         const amt = Number(data.amount) || 0;
@@ -108,7 +105,6 @@ export default function MedicalSupportFull() {
       setRaisedAmount(total);
       setProgressPercent(Math.min(Math.round((total / goal) * 100), 100));
 
-      // Build leaderboard from donorsMap
       const lb = Object.entries(donorsMap)
         .map(([name, amt]) => ({ name, amount: amt }))
         .sort((a, b) => b.amount - a.amount)
@@ -116,7 +112,6 @@ export default function MedicalSupportFull() {
       setLeaderboard(lb);
     });
 
-    // Urgent needs collection snapshot
     const urgentCol = collection(db, "urgent_needs");
     const unsubUrgent = onSnapshot(urgentCol, (snapshot) => {
       const list = [];
@@ -126,10 +121,10 @@ export default function MedicalSupportFull() {
       setUrgentNeeds(list);
     });
 
-    // Basic stats snapshot (you can maintain these in a separate doc in your project)
+   
     const statsCol = collection(db, "stats");
     const unsubStats = onSnapshot(statsCol, (snapshot) => {
-      // naive: sum up particular docs; for demo just compute locally
+    
       let patients = 0, surgeries = 0, medicines = 0, emergencies = 0;
       snapshot.forEach((doc) => {
         const d = doc.data();
@@ -138,7 +133,7 @@ export default function MedicalSupportFull() {
         medicines += Number(d.medicines || 0);
         emergencies += Number(d.emergencies || 0);
       });
-      // animate counters to these values
+   
       animateTo(patients, (val) => setStats((s) => ({ ...s, patients: val })));
       animateTo(surgeries, (val) => setStats((s) => ({ ...s, surgeries: val })));
       animateTo(medicines, (val) => setStats((s) => ({ ...s, medicines: val })));
@@ -150,10 +145,10 @@ export default function MedicalSupportFull() {
       unsubUrgent();
       unsubStats();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
-  // ------------------ Handlers -------------------
+ 
   const submitDonation = async (e) => {
     e.preventDefault();
     if (!donation.name || !donation.amount) {
@@ -193,7 +188,7 @@ export default function MedicalSupportFull() {
     }
   };
 
-  // Add an urgent need (for demo / admin UI you can use the same form)
+  
   const addUrgentNeed = async () => {
     try {
       await addDoc(collection(db, "urgent_needs"), {
@@ -209,14 +204,13 @@ export default function MedicalSupportFull() {
     }
   };
 
-  // Chatbot logic (simple)
   const handleChatSubmit = (e) => {
     e.preventDefault();
     const input = e.target.chatInput.value.trim();
     if (!input) return;
     setChatMessages((m) => [...m, { from: "user", text: input }]);
 
-    // basic rule-based replies
+   
     let reply = "Sorry, I didn't understand. Try: 'donation', 'surgery', 'volunteer', 'urgent'.";
     const lower = input.toLowerCase();
     if (lower.includes("donation") || lower.includes("where")) {
@@ -236,7 +230,7 @@ export default function MedicalSupportFull() {
     e.target.chatInput.value = "";
   };
 
-  // Pie chart data for distribution
+ 
   const pieData = {
     labels: ["Surgeries", "Medicines", "Admin"],
     datasets: [

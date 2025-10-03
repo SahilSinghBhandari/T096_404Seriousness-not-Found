@@ -48,7 +48,7 @@ const Volunteer = () => {
     setShowCamera(false);
   };
 
-  // ✅ Handle gallery upload
+
   const handleGallery = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -59,12 +59,12 @@ const Volunteer = () => {
     setShowOptions(false);
   };
 
-  // ✅ Handle text input
+ 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle checkbox
+  
   const handleCheckbox = (e) => {
     const { value, checked } = e.target;
     let updatedInterests = [...formData.interests];
@@ -76,7 +76,7 @@ const Volunteer = () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
-  // ✅ Submit form
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -101,7 +101,7 @@ const Volunteer = () => {
     try {
       let imageUrl = "";
 
-      // Step 1: Create Firestore doc with `status: pending`
+    
       const volunteerRef = await addDoc(collection(db, "volunteers"), {
         ...formData,
         imageUrl: "", // placeholder
@@ -111,7 +111,6 @@ const Volunteer = () => {
         createdAt: serverTimestamp(),
       });
 
-      // Step 2: Upload photo if exists
       if (image) {
         const storage = getStorage();
         const storageRef = ref(
@@ -153,7 +152,7 @@ const Volunteer = () => {
           {!submitted ? (
             <Card className="shadow-lg border-0 p-4">
               <h2 className="text-center text-success mb-4">
-                Volunteer at {pingalwada?.name || "Pingalwada"} 🤝
+                Volunteer at {pingalwada?.name || "AshaDeep"} 🤝
               </h2>
 
               {/* Profile Image Upload */}

@@ -17,6 +17,7 @@ import {
   doc,
   deleteDoc,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -28,6 +29,7 @@ export default function AdminPanel() {
   const [volunteers, setVolunteers] = useState([]);
   const [pingalwadas, setPingalwadas] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]); // Job Requests
 
   // Modals
   const [showForm, setShowForm] = useState(false);
@@ -84,13 +86,43 @@ export default function AdminPanel() {
     setJobs(querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
+  const fetchApplications = async () => {
+    const querySnapshot = await getDocs(collection(db, "applications"));
+    setApplications(querySnapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchDonors();
     fetchVolunteers();
     fetchPingalwadas();
     fetchJobs();
+    fetchApplications();
   }, []);
+
+  // 🔹 Approve Job Application
+  const handleApproveApplication = async (id) => {
+    try {
+      await updateDoc(doc(db, "applications", id), { status: "approved" });
+      toast.success("✅ Application approved!");
+      fetchApplications();
+    } catch (error) {
+      toast.error("❌ Failed to approve application");
+      console.error(error);
+    }
+  };
+
+  // 🔹 Reject Job Application
+  const handleRejectApplication = async (id) => {
+    try {
+      await updateDoc(doc(db, "applications", id), { status: "rejected" });
+      toast.info("🚫 Application rejected!");
+      fetchApplications();
+    } catch (error) {
+      toast.error("❌ Failed to reject application");
+      console.error(error);
+    }
+  };
 
   // 🔹 Add Pingalwada
   const handleAddPingalwada = async (e) => {
@@ -190,7 +222,7 @@ export default function AdminPanel() {
     }
   };
 
-  // 🔹 Toggle Volunteer Status (update in BOTH collections)
+  // 🔹 Toggle Volunteer Status
   const handleToggleVolunteer = async (id, status) => {
     try {
       await setDoc(doc(db, "volunteers", id), { status }, { merge: true });
@@ -226,120 +258,34 @@ export default function AdminPanel() {
       >
         <h4 className="text-center mb-4 fw-bold">Admin Panel</h4>
         <ul className="list-unstyled">
-          <li>
-            <Button
-              variant={activeTab === "home" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
-              onClick={() => setActiveTab("home")}
-            >
-              Home
-            </Button>
-          </li>
-          <li>
-            <Button
-              variant={activeTab === "donors" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
-              onClick={() => setActiveTab("donors")}
-            >
-              Donors
-            </Button>
-          </li>
-          <li>
-            <Button
-              variant={activeTab === "volunteers" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
-              onClick={() => setActiveTab("volunteers")}
-            >
-              Volunteers
-            </Button>
-          </li>
-          <li>
-            <Button
-              variant={activeTab === "pingalwada" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
-              onClick={() => setActiveTab("pingalwada")}
-            >
-              Pingalwada
-            </Button>
-          </li>
-          <li>
-            <Button
-              variant={activeTab === "jobs" ? "light" : "outline-light"}
-              className="w-100 mb-2 fw-semibold"
-              onClick={() => setActiveTab("jobs")}
-            >
-              Jobs
-            </Button>
-          </li>
-          <li>
-            <Button
-              variant="danger"
-              className="w-100 mt-5 fw-semibold"
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-          </li>
+          <li><Button variant={activeTab==="home"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("home")}>Home</Button></li>
+          <li><Button variant={activeTab==="donors"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("donors")}>Donors</Button></li>
+          <li><Button variant={activeTab==="volunteers"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("volunteers")}>Volunteers</Button></li>
+          <li><Button variant={activeTab==="pingalwada"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("pingalwada")}>Pingalwada</Button></li>
+          <li><Button variant={activeTab==="jobs"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("jobs")}>Jobs</Button></li>
+          <li><Button variant={activeTab==="applications"?"light":"outline-light"} className="w-100 mb-2 fw-semibold" onClick={()=>setActiveTab("applications")}>Job Requests</Button></li>
+          <li><Button variant="danger" className="w-100 mt-5 fw-semibold" onClick={handleLogout}>Logout</Button></li>
         </ul>
       </div>
 
       {/* Content */}
       <div className="flex-grow-1 p-4 bg-light" style={{ minHeight: "100vh" }}>
-        {/* Users */}
-        {activeTab === "home" && (
+
+        {/* Home (Users) */}
+        {activeTab==="home" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">All Users</h3>
             <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+              <thead className="table-primary"><tr><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
-                {users.map((u, i) => (
+                {users.map((u,i)=>(
                   <tr key={i}>
-                    <td>{u.email}</td>
-                    <td>{u.role}</td>
+                    <td>{u.email}</td><td>{u.role}</td>
+                    <td><span className={`badge ${u.status==="accepted"?"bg-success":u.status==="blocked"?"bg-danger":"bg-warning text-dark"}`}>{u.status||"pending"}</span></td>
                     <td>
-                      <span
-                        className={`badge ${
-                          u.status === "accepted"
-                            ? "bg-success"
-                            : u.status === "blocked"
-                            ? "bg-danger"
-                            : "bg-warning text-dark"
-                        }`}
-                      >
-                        {u.status || "pending"}
-                      </span>
-                    </td>
-                    <td>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleToggleUser(u.id, "accepted")}
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        variant="warning"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleToggleUser(u.id, "pending")}
-                      >
-                        Pending
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleToggleUser(u.id, "blocked")}
-                      >
-                        Block
-                      </Button>
+                      <Button variant="success" size="sm" className="me-2" onClick={()=>handleToggleUser(u.id,"accepted")}>Accept</Button>
+                      <Button variant="warning" size="sm" className="me-2" onClick={()=>handleToggleUser(u.id,"pending")}>Pending</Button>
+                      <Button variant="danger" size="sm" onClick={()=>handleToggleUser(u.id,"blocked")}>Block</Button>
                     </td>
                   </tr>
                 ))}
@@ -349,28 +295,14 @@ export default function AdminPanel() {
         )}
 
         {/* Donors */}
-        {activeTab === "donors" && (
+        {activeTab==="donors" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">Donors List</h3>
             <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Location</th>
-                  <th>Total Donations</th>
-                  <th>Total Amount</th>
-                </tr>
-              </thead>
+              <thead className="table-primary"><tr><th>Name</th><th>Email</th><th>Location</th><th>Total Donations</th><th>Total Amount</th></tr></thead>
               <tbody>
-                {donors.map((d, i) => (
-                  <tr key={i}>
-                    <td>{d.donorName}</td>
-                    <td>{d.donorEmail}</td>
-                    <td>{d.donorLocation}</td>
-                    <td>{d.totalDonations}</td>
-                    <td>₹{d.totalAmount}</td>
-                  </tr>
+                {donors.map((d,i)=>(
+                  <tr key={i}><td>{d.donorName}</td><td>{d.donorEmail}</td><td>{d.donorLocation}</td><td>{d.totalDonations}</td><td>₹{d.totalAmount}</td></tr>
                 ))}
               </tbody>
             </Table>
@@ -378,70 +310,20 @@ export default function AdminPanel() {
         )}
 
         {/* Volunteers */}
-        {activeTab === "volunteers" && (
+        {activeTab==="volunteers" && (
           <Card className="p-3 shadow-sm border-0">
             <h3 className="mb-3 text-primary">Volunteers List</h3>
             <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Skills</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+              <thead className="table-primary"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Skills</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
-                {volunteers.map((v, i) => (
+                {volunteers.map((v,i)=>(
                   <tr key={i}>
-                    <td>{v.name}</td>
-                    <td>{v.email}</td>
-                    <td>{v.phone}</td>
-                    <td>{v.interests?.join(", ")}</td>
+                    <td>{v.name}</td><td>{v.email}</td><td>{v.phone}</td><td>{v.interests?.join(", ")}</td>
+                    <td><span className={`badge ${v.status==="accepted"?"bg-success":v.status==="blocked"?"bg-danger":"bg-warning text-dark"}`}>{v.status||"pending"}</span></td>
                     <td>
-                      <span
-                        className={`badge ${
-                          v.status === "accepted"
-                            ? "bg-success"
-                            : v.status === "blocked"
-                            ? "bg-danger"
-                            : "bg-warning text-dark"
-                        }`}
-                      >
-                        {v.status || "pending"}
-                      </span>
-                    </td>
-                    <td>
-                      <Button
-                        variant="success"
-                        size="sm"
-                        className="me-2"
-                        onClick={() =>
-                          handleToggleVolunteer(v.id, "accepted")
-                        }
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        variant="warning"
-                        size="sm"
-                        className="me-2"
-                        onClick={() =>
-                          handleToggleVolunteer(v.id, "pending")
-                        }
-                      >
-                        Pending
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() =>
-                          handleToggleVolunteer(v.id, "blocked")
-                        }
-                      >
-                        Block
-                      </Button>
+                      <Button variant="success" size="sm" className="me-2" onClick={()=>handleToggleVolunteer(v.id,"accepted")}>Accept</Button>
+                      <Button variant="warning" size="sm" className="me-2" onClick={()=>handleToggleVolunteer(v.id,"pending")}>Pending</Button>
+                      <Button variant="danger" size="sm" onClick={()=>handleToggleVolunteer(v.id,"blocked")}>Block</Button>
                     </td>
                   </tr>
                 ))}
@@ -451,43 +333,15 @@ export default function AdminPanel() {
         )}
 
         {/* Pingalwada */}
-        {activeTab === "pingalwada" && (
+        {activeTab==="pingalwada" && (
           <Card className="p-3 shadow-sm border-0">
-            <div className="d-flex justify-content-between mb-3">
-              <h3 className="text-primary">Pingalwada Management</h3>
-              <Button variant="success" onClick={() => setShowForm(true)}>
-                + Add Pingalwada
-              </Button>
-            </div>
+            <div className="d-flex justify-content-between mb-3"><h3 className="text-primary">Pingalwada Management</h3><Button variant="success" onClick={()=>setShowForm(true)}>+ Add Pingalwada</Button></div>
             <Table striped bordered hover responsive>
-              <thead className="table-primary">
-                <tr>
-                  <th>Name</th>
-                  <th>Location</th>
-                  <th>Phone</th>
-                  <th>Capacity</th>
-                  <th>Description</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
+              <thead className="table-primary"><tr><th>Name</th><th>Location</th><th>Phone</th><th>Capacity</th><th>Description</th><th>Actions</th></tr></thead>
               <tbody>
-                {pingalwadas.map((p, i) => (
-                  <tr key={i}>
-                    <td>{p.name}</td>
-                    <td>{p.location}</td>
-                    <td>{p.phone}</td>
-                    <td>{p.capacity}</td>
-                    <td>{p.description}</td>
-                    <td>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeletePingalwada(p.id)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
+                {pingalwadas.map((p,i)=>(
+                  <tr key={i}><td>{p.name}</td><td>{p.location}</td><td>{p.phone}</td><td>{p.capacity}</td><td>{p.description}</td>
+                    <td><Button variant="danger" size="sm" onClick={()=>handleDeletePingalwada(p.id)}>Delete</Button></td></tr>
                 ))}
               </tbody>
             </Table>
@@ -495,188 +349,76 @@ export default function AdminPanel() {
         )}
 
         {/* Jobs */}
-        {activeTab === "jobs" && (
+        {activeTab==="jobs" && (
           <Card className="p-3 shadow-sm border-0">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h3 className="text-success">Manage Jobs 💼</h3>
-              <Button onClick={() => setShowJobForm(true)}>+ Add Job</Button>
-            </div>
+            <div className="d-flex justify-content-between align-items-center mb-3"><h3 className="text-success">Manage Jobs 💼</h3><Button onClick={()=>setShowJobForm(true)}>+ Add Job</Button></div>
             <Table striped bordered hover responsive>
-              <thead className="table-success">
-                <tr>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Location</th>
-                  <th>Time</th>
-                  <th>Skills</th>
-                  <th>Description</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
+              <thead className="table-success"><tr><th>Title</th><th>Category</th><th>Location</th><th>Time</th><th>Skills</th><th>Description</th><th>Action</th></tr></thead>
               <tbody>
-                {jobs.map((job) => (
-                  <tr key={job.id}>
-                    <td>{job.title}</td>
-                    <td>{job.category}</td>
-                    <td>{job.location}</td>
-                    <td>{job.time}</td>
-                    <td>{job.skills}</td>
-                    <td>{job.description}</td>
-                    <td>
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDeleteJob(job.id)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
+                {jobs.map((job)=>(
+                  <tr key={job.id}><td>{job.title}</td><td>{job.category}</td><td>{job.location}</td><td>{job.time}</td><td>{job.skills}</td><td>{job.description}</td>
+                    <td><Button variant="danger" size="sm" onClick={()=>handleDeleteJob(job.id)}>Delete</Button></td></tr>
                 ))}
               </tbody>
             </Table>
           </Card>
         )}
+
+        {/* Job Requests */}
+        {activeTab==="applications" && (
+          <Card className="p-3 shadow-sm border-0">
+            <h3 className="mb-3 text-primary">Job Requests</h3>
+            <Table striped bordered hover responsive>
+              <thead className="table-info"><tr><th>Name</th><th>Email</th><th>Phone</th><th>Job Title</th><th>Skills</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {applications.length===0 ? (
+                  <tr><td colSpan="7" className="text-center">No job applications found</td></tr>
+                ):(
+                  applications.map((app)=>(
+                    <tr key={app.id}>
+                      <td>{app.name}</td><td>{app.email}</td><td>{app.phone}</td><td>{app.jobTitle}</td><td>{app.skills}</td>
+                      <td><span className={`badge ${app.status==="approved"?"bg-success":app.status==="rejected"?"bg-danger":"bg-warning text-dark"}`}>{app.status||"pending"}</span></td>
+                      <td>
+                        <Button variant="success" size="sm" className="me-2" onClick={()=>handleApproveApplication(app.id)}>Approve</Button>
+                        <Button variant="danger" size="sm" onClick={()=>handleRejectApplication(app.id)}>Reject</Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </Card>
+        )}
+
       </div>
 
       {/* Modal for Adding Pingalwada */}
-      <Modal show={showForm} onHide={() => setShowForm(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Add Pingalwada</Modal.Title>
-        </Modal.Header>
+      <Modal show={showForm} onHide={()=>setShowForm(false)} centered>
+        <Modal.Header closeButton><Modal.Title>Add Pingalwada</Modal.Title></Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleAddPingalwada}>
-            <Form.Group className="mb-2">
-              <Form.Label>Name</Form.Label>
-              <Form.Control
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Location</Form.Label>
-              <Form.Control
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Phone</Form.Label>
-              <Form.Control
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Capacity</Form.Label>
-              <Form.Control
-                value={formData.capacity}
-                onChange={(e) =>
-                  setFormData({ ...formData, capacity: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Button type="submit" variant="success" className="mt-2 w-100">
-              Add Pingalwada
-            </Button>
+            <Form.Group className="mb-2"><Form.Label>Name</Form.Label><Form.Control value={formData.name} onChange={(e)=>setFormData({...formData,name:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Location</Form.Label><Form.Control value={formData.location} onChange={(e)=>setFormData({...formData,location:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Phone</Form.Label><Form.Control value={formData.phone} onChange={(e)=>setFormData({...formData,phone:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Capacity</Form.Label><Form.Control value={formData.capacity} onChange={(e)=>setFormData({...formData,capacity:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Description</Form.Label><Form.Control as="textarea" rows={2} value={formData.description} onChange={(e)=>setFormData({...formData,description:e.target.value})} required/></Form.Group>
+            <Button type="submit" variant="success" className="mt-2 w-100">Add Pingalwada</Button>
           </Form>
         </Modal.Body>
       </Modal>
 
       {/* Modal for Adding Job */}
-      <Modal show={showJobForm} onHide={() => setShowJobForm(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Add Job</Modal.Title>
-        </Modal.Header>
+      <Modal show={showJobForm} onHide={()=>setShowJobForm(false)} centered>
+        <Modal.Header closeButton><Modal.Title>Add Job</Modal.Title></Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleAddJob}>
-            <Form.Group className="mb-2">
-              <Form.Label>Job Title</Form.Label>
-              <Form.Control
-                value={jobData.title}
-                onChange={(e) =>
-                  setJobData({ ...jobData, title: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Category</Form.Label>
-              <Form.Control
-                value={jobData.category}
-                onChange={(e) =>
-                  setJobData({ ...jobData, category: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Location</Form.Label>
-              <Form.Control
-                value={jobData.location}
-                onChange={(e) =>
-                  setJobData({ ...jobData, location: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Time</Form.Label>
-              <Form.Control
-                value={jobData.time}
-                onChange={(e) =>
-                  setJobData({ ...jobData, time: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Skills Required</Form.Label>
-              <Form.Control
-                value={jobData.skills}
-                onChange={(e) =>
-                  setJobData({ ...jobData, skills: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-2">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                value={jobData.description}
-                onChange={(e) =>
-                  setJobData({ ...jobData, description: e.target.value })
-                }
-                required
-              />
-            </Form.Group>
-            <Button type="submit" variant="success" className="mt-2 w-100">
-              Add Job
-            </Button>
+            <Form.Group className="mb-2"><Form.Label>Job Title</Form.Label><Form.Control value={jobData.title} onChange={(e)=>setJobData({...jobData,title:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Category</Form.Label><Form.Control value={jobData.category} onChange={(e)=>setJobData({...jobData,category:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Location</Form.Label><Form.Control value={jobData.location} onChange={(e)=>setJobData({...jobData,location:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Time</Form.Label><Form.Control value={jobData.time} onChange={(e)=>setJobData({...jobData,time:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Skills Required</Form.Label><Form.Control value={jobData.skills} onChange={(e)=>setJobData({...jobData,skills:e.target.value})} required/></Form.Group>
+            <Form.Group className="mb-2"><Form.Label>Description</Form.Label><Form.Control as="textarea" rows={2} value={jobData.description} onChange={(e)=>setJobData({...jobData,description:e.target.value})} required/></Form.Group>
+            <Button type="submit" variant="success" className="mt-2 w-100">Add Job</Button>
           </Form>
         </Modal.Body>
       </Modal>

@@ -1,83 +1,75 @@
+import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
-import { FaFacebook, FaTwitter, FaDribbble, FaInstagram, FaHeart } from "react-icons/fa";
+import {
+  FaFacebook,
+  FaTwitter,
+  FaInstagram,
+  FaLinkedin,
+  FaHeart,
+} from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="bg-dark text-light pt-5">
+    <footer
+      style={{
+        background: "linear-gradient(90deg, #1e3c72, #2a5298)", // matches your sidebar
+        color: "white",
+        padding: "40px 0 20px",
+        marginTop: "40px",
+      }}
+    >
       <Container>
         <Row className="mb-4">
-          {/* Logo & About */}
+          {/* About Ashadeep */}
           <Col md={4}>
-            <div className="mb-3">
-              <img src="/assets/img/footer_logo.png" alt="Logo" width="180" />
-            </div>
-            <p>
-              Ashadeep is a humble initiative by Pingalwara to bring compassion, care, and service closer to those in need through the digital world. 
+            <h5 className="fw-bold">🌼 Ashadeep</h5>
+            <p style={{ fontSize: "14px", lineHeight: "1.6" }}>
+              A digital initiative of Pingalwara to spread kindness, 
+              connect volunteers, and support those in need.  
+              Together, we build hope and compassion. 💙
             </p>
-            <div className="d-flex gap-3 fs-4">
-              <a href="#" className="text-light"><FaFacebook /></a>
-              <a href="#" className="text-light"><FaTwitter /></a>
-              <a href="#" className="text-light"><FaDribbble /></a>
-              <a href="#" className="text-light"><FaInstagram /></a>
-            </div>
           </Col>
 
-          {/* Services */}
-          <Col md={2}>
-            <h5 className="fw-bold">Services</h5>
-            <ul className="list-unstyled">
-              <li><a href="#" className="text-light text-decoration-none">Donate</a></li>
-              <li><a href="#" className="text-light text-decoration-none">Sponsor</a></li>
-              <li><a href="#" className="text-light text-decoration-none">Fundraise</a></li>
-              <li><a href="#" className="text-light text-decoration-none">Volunteer</a></li>
-              <li><a href="#" className="text-light text-decoration-none">Partner</a></li>
-              <li><a href="#" className="text-light text-decoration-none">Jobs</a></li>
+          {/* Quick Links */}
+          <Col md={4}>
+            <h5 className="fw-bold">Quick Links</h5>
+            <ul className="list-unstyled" style={{ fontSize: "14px" }}>
+              <li><Link to="/" style={{ color: "white", textDecoration: "none" }}>Home</Link></li>
+              <li><Link to="/donate" style={{ color: "white", textDecoration: "none" }}>Donate</Link></li>
+              <li><Link href="/volunteer" style={{ color: "white", textDecoration: "none" }}>Volunteer</Link></li>
+              <li><Link to="/job" style={{ color: "white", textDecoration: "none" }}>Job Opportunities</Link></li>
+              {/* <li><a href="/contact" style={{ color: "white", textDecoration: "none" }}>Contact</a></li> */}
             </ul>
           </Col>
 
-          {/* Contacts */}
-          <Col md={3}>
-            <h5 className="fw-bold">Contacts</h5>
-            <p>
-              +2(305) 587-3407 <br />
-              info@loveuscharity.com <br />
-              Flat 20, Reynolds Neck, North Helenaville, FV77 8WS
-            </p>
-          </Col>
-
-          {/* Top News */}
-          <Col md={3}>
-            <h5 className="fw-bold">Top News</h5>
-            <div className="d-flex mb-3">
-              <img src="/assets/img/news/news_1.png" alt="News" width="60" className="me-2 rounded" />
-              <div>
-                <a href="#" className="text-light text-decoration-none">
-                  <h6 className="mb-1">School for African Children</h6>
-                </a>
-                <small>Jun 12, 2019</small>
-              </div>
-            </div>
-            <div className="d-flex">
-              <img src="/assets/img/news/news_2.png" alt="News" width="60" className="me-2 rounded" />
-              <div>
-                <a href="#" className="text-light text-decoration-none">
-                  <h6 className="mb-1">Education Support Program</h6>
-                </a>
-                <small>Jun 15, 2019</small>
-              </div>
+          {/* Social Media */}
+          <Col md={4}>
+            <h5 className="fw-bold">Connect With Us</h5>
+            <div className="d-flex gap-3 mt-2">
+              <a href="https://facebook.com" target="_blank" rel="noreferrer">
+                <FaFacebook size={22} color="white" />
+              </a>
+              <a href="https://twitter.com" target="_blank" rel="noreferrer">
+                <FaTwitter size={22} color="white" />
+              </a>
+              <a href="https://instagram.com" target="_blank" rel="noreferrer">
+                <FaInstagram size={22} color="white" />
+              </a>
+              <a href="https://linkedin.com" target="_blank" rel="noreferrer">
+                <FaLinkedin size={22} color="white" />
+              </a>
             </div>
           </Col>
         </Row>
 
-        {/* Copyright */}
-        <Row className="pt-3 border-top">
-          <Col className="text-center">
-            <p className="mb-0">
-              Made with <FaHeart className="text-danger" /> by{" "}
-              <a href="https://colorlib.com" className="text-warning text-decoration-none" target="_blank" rel="noreferrer">
-                
-              </a>
-            </p>
+        <hr style={{ borderColor: "rgba(255,255,255,0.3)" }} />
+
+        {/* Bottom Line */}
+        <Row>
+          <Col className="text-center" style={{ fontSize: "13px" }}>
+            © {new Date().getFullYear()} Ashadeep. 
+            Made with <FaHeart color="red" /> for humanity.
           </Col>
         </Row>
       </Container>

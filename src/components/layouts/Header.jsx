@@ -8,16 +8,14 @@ import { doc, getDoc } from "firebase/firestore";
 
 export default function Header() {
   const [user, setUser] = useState(null);
-  const [userName, setUserName] = useState(""); // ✅ store registered name
+  const [userName, setUserName] = useState(""); 
   const nav = useNavigate();
 
-  // ✅ Track logged-in user
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
 
-        // ✅ Fetch name from Firestore "users" collection
         try {
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
@@ -39,7 +37,6 @@ export default function Header() {
     return () => unsubscribe();
   }, []);
 
-  // ✅ Logout
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -64,7 +61,7 @@ export default function Header() {
       >
         <Container>
           <Navbar.Brand as={Link} to="/" className="fw-bold fs-4 text-white">
-            Digital Pingalwara
+            AshaDeep
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="basic-navbar-nav" />
           <Navbar.Collapse id="basic-navbar-nav">

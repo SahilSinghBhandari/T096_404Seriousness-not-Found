@@ -27,7 +27,6 @@ const Donation = () => {
   const pingalwada = location.state;
   const storage = getStorage();
 
-  // ✅ Reset form fields
   const resetForm = () => {
     setAmount("");
     setName("");
@@ -38,12 +37,10 @@ const Donation = () => {
     setProfilePic(null);
   };
 
-  // ✅ Reset every time Donation page loads
   useEffect(() => {
     resetForm();
   }, []);
 
-  // ✅ Upload profile picture
   const uploadProfilePic = async (docId) => {
     if (!profilePic) return "";
     try {
@@ -68,7 +65,6 @@ const Donation = () => {
       return;
     }
 
-    // Step 1: Create initial Firestore doc
     let createdDocRef = null;
     try {
       const paymentsCol = collection(db, "payments");
@@ -94,7 +90,6 @@ const Donation = () => {
 
     const docId = createdDocRef.id;
 
-    // Step 2: Razorpay checkout
     const options = {
       key: pingalwada.razorpayKey || "rzp_test_ROv4afGSGZTaUy",
       amount: Number(amount) * 100,
@@ -102,7 +97,7 @@ const Donation = () => {
       name: pingalwada.name,
       description: `Donation to ${pingalwada.name}`,
       prefill: { name, email, contact: "9999999999" },
-      theme: { color: "#0066cc" },
+      theme: { color: "#198754" }, // green theme
 
       handler: async function (response) {
         try {
@@ -132,8 +127,13 @@ const Donation = () => {
           toast.success("🎉 Payment successful!");
           setSubmitted(true);
 
-          resetForm(); // ✅ clear before navigating
-          nav("/thankyou");
+          resetForm();
+
+          // ✅ Delay navigation so Razorpay modal closes fully
+          setTimeout(() => {
+            nav("/thankyou");
+          }, 500);
+
         } catch (err) {
           console.error("Error in payment handler:", err);
           toast.error("✅ Payment succeeded, but saving failed.");
@@ -143,7 +143,7 @@ const Donation = () => {
       modal: {
         ondismiss: () => {
           toast.info("ℹ️ Payment cancelled by user.");
-          resetForm(); // ✅ clear on cancel
+          resetForm();
         },
       },
     };
@@ -159,18 +159,20 @@ const Donation = () => {
 
   return (
     <Container className="py-5">
-      <Row className="justify-content-center text-center mb-5">
-        <Col md={8}>
-          <h1 className="text-success fw-bold">
-            Donate to {pingalwada?.name || "Pingalwada"} 💚
+      {/* 🌟 Hero Section */}
+      <Row className="justify-content-center text-center mb-4">
+        <Col md={10}>
+          <h1 className="fw-bold text-success">
+            💚 Donate to {pingalwada?.name || "AshaDeep"}
           </h1>
-          <p className="text-muted">
-            Your donation will directly support {pingalwada?.name} in{" "}
-            {pingalwada?.location}.
+          <p className="text-muted fs-5">
+            Together we can bring hope, care, and dignity to those in need.  
+            Every contribution makes a difference.
           </p>
         </Col>
       </Row>
 
+      {/* 🌟 Donation Form */}
       <Row className="justify-content-center">
         <Col md={6}>
           <Card className="shadow-lg border-0 p-4">
@@ -208,70 +210,6 @@ const Donation = () => {
                   />
                 </Form.Group>
 
-                <Row>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>State</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Enter your state"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>City</Form.Label>
-                      <Form.Control
-                        type="text"
-                        placeholder="Enter your city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Profile Picture (Optional)</Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProfilePic(e.target.files?.[0] || null)}
-                  />
-                  {profilePic && (
-                    <div className="mt-2 text-center">
-                      <img
-                        src={URL.createObjectURL(profilePic)}
-                        alt="preview"
-                        style={{
-                          width: "80px",
-                          height: "80px",
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
-                  )}
-                </Form.Group>
-
-                {/* ✅ Quick Select Donation Buttons */}
-                <Form.Group className="mb-3">
-                  <Form.Label>Choose Quick Amount</Form.Label>
-                  <div className="d-flex gap-2 mb-2">
-                    {[100, 500, 1000].map((amt) => (
-                      <Button
-                        key={amt}
-                        variant={amount === String(amt) ? "success" : "outline-success"}
-                        onClick={() => setAmount(String(amt))}
-                      >
-                        ₹{amt}
-                      </Button>
-                    ))}
-                  </div>
-                </Form.Group>
-
                 <Form.Group className="mb-3">
                   <Form.Label>Donation Amount (₹) *</Form.Label>
                   <Form.Control
@@ -287,7 +225,7 @@ const Donation = () => {
                   <Form.Control
                     as="textarea"
                     rows={3}
-                    placeholder="Write a message..."
+                    placeholder="Write a message of support..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     required
@@ -298,6 +236,7 @@ const Donation = () => {
                   <Button variant="success" size="lg" onClick={handlePayment}>
                     Donate Now 💝
                   </Button>
+                  <small className="text-muted mt-2">🔒 Secure Payment via Razorpay</small>
                 </div>
               </Form>
             </Card.Body>

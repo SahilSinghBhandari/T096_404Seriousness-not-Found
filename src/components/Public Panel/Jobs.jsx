@@ -8,11 +8,9 @@ export default function Jobs() {
   const [jobsByCategory, setJobsByCategory] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Modal state
   const [showForm, setShowForm] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
 
-  // Application form state
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,7 +19,7 @@ export default function Jobs() {
     message: "",
   });
 
-  // ✅ Fetch jobs and group by category
+
   useEffect(() => {
     const fetchJobs = async () => {
       try {
@@ -31,7 +29,6 @@ export default function Jobs() {
           ...doc.data(),
         }));
 
-        // Group jobs by category
         const grouped = jobs.reduce((acc, job) => {
           const category = job.category || "Other";
           if (!acc[category]) acc[category] = [];
@@ -48,13 +45,13 @@ export default function Jobs() {
     fetchJobs();
   }, []);
 
-  // ✅ Open Apply form for a job
+
   const handleApplyClick = (job) => {
     setSelectedJob(job);
     setShowForm(true);
   };
 
-  // ✅ Submit Application
+
   const handleApplicationSubmit = async (e) => {
     e.preventDefault();
     if (!selectedJob) return;
@@ -70,7 +67,7 @@ export default function Jobs() {
       toast.success("✅ Application submitted successfully!");
       setShowForm(false);
 
-      // Reset form
+
       setFormData({ name: "", email: "", phone: "", skills: "", message: "" });
     } catch (error) {
       console.error("❌ Error submitting application:", error);
@@ -80,7 +77,7 @@ export default function Jobs() {
 
   return (
     <Container className="py-5">
-      <h2 className="text-center text-primary mb-4">Volunteer Opportunities 🤝</h2>
+      <h2 className="text-center text-primary mb-4">Volunteer Opportunities at AshaDeep🤝</h2>
 
       {loading ? (
         <div className="text-center">
