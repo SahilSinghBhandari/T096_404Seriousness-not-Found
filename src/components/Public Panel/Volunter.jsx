@@ -18,7 +18,6 @@ import Webcam from "react-webcam";
 import { db } from "../../firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
-import { useLocation } from "react-router-dom";
 
 const Volunteer = () => {
   const [image, setImage] = useState(null);
@@ -27,10 +26,6 @@ const Volunteer = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const webcamRef = useRef(null);
-
-  // ✅ Get Pingalwada info from navigation state
-  const location = useLocation();
-  const pingalwada = location.state;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -48,7 +43,7 @@ const Volunteer = () => {
     setShowCamera(false);
   };
 
-
+  // ✅ Upload from gallery
   const handleGallery = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -59,12 +54,12 @@ const Volunteer = () => {
     setShowOptions(false);
   };
 
- 
+  // ✅ Handle input change
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  
+  // ✅ Handle checkbox
   const handleCheckbox = (e) => {
     const { value, checked } = e.target;
     let updatedInterests = [...formData.interests];
@@ -76,7 +71,7 @@ const Volunteer = () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
- 
+  // ✅ Submit volunteer form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -91,42 +86,48 @@ const Volunteer = () => {
       return;
     }
 
-    if (!pingalwada?.id) {
-      toast.error("❌ Pingalwada info missing. Please go back and try again.");
-      return;
-    }
-
     setLoading(true);
 
     try {
+      console.log("Submitting volunteer data:", formData);
+
       let imageUrl = "";
 
-    
+      // ✅ Save volunteer data in Firestore
       const volunteerRef = await addDoc(collection(db, "volunteers"), {
         ...formData,
-        imageUrl: "", // placeholder
-        pingalwadaId: pingalwada.id,
-        pingalwadaName: pingalwada.name,
-        status: "pending", // 👈 important for admin action
+        imageUrl: "",
+        status: "pending", // Admin can later approve/reject
         createdAt: serverTimestamp(),
       });
 
-      if (image) {
-        const storage = getStorage();
-        const storageRef = ref(
-          storage,
-          `volunteers/${volunteerRef.id}-${Date.now()}.jpg`
-        );
-        await uploadString(storageRef, image, "data_url");
-        imageUrl = await getDownloadURL(storageRef);
+      console.log("Volunteer added with ID:", volunteerRef.id);
 
-        // Update Firestore with photo URL
-        await updateDoc(doc(db, "volunteers", volunteerRef.id), { imageUrl });
+      // ✅ Upload image if available
+      if (image) {
+        try {
+          const storage = getStorage();
+          const storageRef = ref(
+            storage,
+            `volunteers/${volunteerRef.id}-${Date.now()}.jpg`
+          );
+
+          console.log("Uploading image...");
+          await uploadString(storageRef, image, "data_url");
+          imageUrl = await getDownloadURL(storageRef);
+
+          // Update Firestore with image URL
+          await updateDoc(doc(db, "volunteers", volunteerRef.id), { imageUrl });
+
+          console.log("Image uploaded:", imageUrl);
+        } catch (imgError) {
+          console.error("Image upload failed:", imgError);
+          toast.error("⚠️ Image upload failed, but data saved.");
+        }
       }
 
-      setLoading(false);
-      setSubmitted(true);
       toast.success("🎉 Volunteer application submitted! Awaiting admin approval.");
+      setSubmitted(true);
 
       // ✅ Reset form
       setFormData({
@@ -138,10 +139,12 @@ const Volunteer = () => {
         interests: [],
       });
       setImage(null);
+
     } catch (error) {
-      setLoading(false);
       console.error("Error saving volunteer:", error);
       toast.error("❌ Something went wrong, please try again.");
+    } finally {
+      setLoading(false); // ✅ Always reset loader
     }
   };
 
@@ -152,7 +155,7 @@ const Volunteer = () => {
           {!submitted ? (
             <Card className="shadow-lg border-0 p-4">
               <h2 className="text-center text-success mb-4">
-                Volunteer at {pingalwada?.name || "AshaDeep"} 🤝
+                Volunteer with Us 🤝
               </h2>
 
               {/* Profile Image Upload */}

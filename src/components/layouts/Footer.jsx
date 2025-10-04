@@ -23,7 +23,7 @@ export default function Footer() {
         <Row className="mb-4">
           {/* About Ashadeep */}
           <Col md={4}>
-            <h5 className="fw-bold">🌼 Ashadeep</h5>
+            <h5 className="fw-bold">🌼 Pingalwara Care Foundation</h5>
             <p style={{ fontSize: "14px", lineHeight: "1.6" }}>
               A digital initiative of Pingalwara to spread kindness, 
               connect volunteers, and support those in need.  
@@ -68,7 +68,7 @@ export default function Footer() {
         {/* Bottom Line */}
         <Row>
           <Col className="text-center" style={{ fontSize: "13px" }}>
-            © {new Date().getFullYear()} Ashadeep. 
+            © {new Date().getFullYear()} Pingalwara Care Foundation. 
             Made with <FaHeart color="red" /> for humanity.
           </Col>
         </Row>

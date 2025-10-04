@@ -1,75 +1,66 @@
-import { useEffect, useState } from "react";
-import { Container, Row, Col, Button, Card, Image, Modal } from "react-bootstrap";
-import { db } from "../../firebase";
-import { collection, getDocs } from "firebase/firestore";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Container, Row, Col, Button, Image, Modal, Form } from "react-bootstrap";
 import PingalwadaSection from "./PingalwadaSection";
 
 export default function About() {
-  const [pingalwadas, setPingalwadas] = useState([]);
   const [showVideo, setShowVideo] = useState(false);
 
-  // ✅ Fetch Pingalwadas from Firestore
-  useEffect(() => {
-    const fetchPingalwadas = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "pingalwada"));
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        console.log("✅ Pingalwada fetched:", data);
-        setPingalwadas(data);
-      } catch (error) {
-        console.error("🔥 Error fetching pingalwadas:", error);
-      }
-    };
-    fetchPingalwadas();
-  }, []);
+  // ✅ Chatbot states
+  const [showChat, setShowChat] = useState(false);
+  const [messages, setMessages] = useState([
+    { sender: "bot", text: "Hello! 👋 How can I help you today?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [listening, setListening] = useState(false);
 
-  // ✅ Static Projects Data
-  const projects = [
-    {
-      id: "patients",
-      title: "Patients",
-      image: "./assets/img/p.jpg",
-      description:
-        "At present there are over 1804 patients who are destitute and most of them are going to spend their entire life in Pingalwara.",
-      points: ["8 Branches", "Old Age Home", "Play Room", "Sensory Room"],
-      location: "Amritsar",
-      razorpayKey: "rzp_test_RP9VlGnNBImdLC", // ✅ added fallback key
-    },
-    {
-      id: "education",
-      title: "Education",
-      image: "./assets/img/e.png",
-      description:
-        "Pingalwara provides education to 775 poor and needy slum-dwelling children from nearby villages.",
-      points: ["Free Education", "Free Books & Uniform", "Free Transport", "100% Result"],
-      location: "Amritsar",
-      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
-    },
-    {
-      id: "medical",
-      title: "Medical Facilities",
-      image: "./assets/img/h.jpg",
-      description:
-        "A medical laboratory and dispensary has been established for the treatment of patients.",
-      points: ["Dispensary & Lab", "Dental Clinic", "Operation Theatre", "Homeopathy"],
-      location: "Amritsar",
-      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
-    },
-    {
-      id: "printing",
-      title: "Printing Press",
-      image: "./assets/img/cel.jpg",
-      description:
-        "Puran Printing Press provides free literature regarding Religion, Social Issues, Economics, Heritage & Health.",
-      points: ["50,000 pages/day", "80 Books Annually", "Expenditure: Rs. 3.80 crore"],
-      location: "Amritsar",
-      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
-    },
-  ];
+  // ✅ FAQ data
+  const faq = {
+    "who founded pingalwara": "Pingalwara was founded by Bhagat Puran Singh Ji 🙏",
+    "what is pingalwara": "Pingalwara is a home for the sick, destitute, and needy people, providing care and dignity ❤️",
+    "how can i donate": "You can donate online through our 'Donate' page 💳",
+    "where is pingalwara located": "Pingalwara is located in Amritsar, Punjab 📍",
+    "how to volunteer": "You can register as a volunteer on our Volunteer page 🙌",
+  };
+
+  // ✅ Handle message send
+  const handleSend = () => {
+    if (!input.trim()) return;
+
+    const userMsg = input.toLowerCase();
+    const botReply =
+      faq[userMsg] || "Sorry, I don’t have an answer for that yet. 🙏";
+
+    setMessages([
+      ...messages,
+      { sender: "user", text: input },
+      { sender: "bot", text: botReply }
+    ]);
+
+    setInput("");
+  };
+
+  // ✅ Voice Input using Web Speech API
+  const handleVoiceInput = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Your browser does not support speech recognition 😢");
+      return;
+    }
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = "en-IN"; // you can change to "hi-IN" for Hindi, "pa-IN" for Punjabi
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(transcript);
+    };
+
+    recognition.start();
+  };
 
   return (
     <>
@@ -77,7 +68,7 @@ export default function About() {
       <div style={{ background: "#f8f9fa", padding: "60px 20px" }}>
         <Container>
           <Row className="align-items-center">
-            {/* Left Side - Motivation Lines */}
+            {/* Left Side */}
             <Col md={6} className="mb-4 mb-md-0">
               <h1 className="fw-bold text-dark">
                 "Service to Humanity, <br /> is Service to God"
@@ -87,16 +78,9 @@ export default function About() {
                 stands as a beacon of hope for the helpless, the destitute, and the sick.  
                 We believe every life deserves dignity, compassion, and care.  
               </p>
-
               <div className="d-flex gap-3 mt-4">
-                <Button variant="success" size="lg">
-                  Join Our Mission
-                </Button>
-                <Button
-                  variant="outline-success"
-                  size="lg"
-                  onClick={() => setShowVideo(true)}
-                >
+                <Button variant="success" size="lg">Join Our Mission</Button>
+                <Button variant="outline-success" size="lg" onClick={() => setShowVideo(true)}>
                   🎬 Watch Story
                 </Button>
               </div>
@@ -106,42 +90,22 @@ export default function About() {
             <Col md={6} className="text-center">
               <Row>
                 <Col xs={6} className="mb-3">
-                  <Image
-                    src="./assets/img/11.jpg"
-                    alt="Pingalwara Children"
-                    fluid
-                    rounded
-                    style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }}
-                  />
+                  <Image src="./assets/img/11.jpg" alt="Pingalwara Children"
+                    fluid rounded style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }} />
                 </Col>
                 <Col xs={6} className="mb-3">
-                  <Image
-                    src="./assets/img/12.jpg"
-                    alt="Helping Patients"
-                    fluid
-                    rounded
-                    style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }}
-                  />
+                  <Image src="./assets/img/12.jpg" alt="Helping Patients"
+                    fluid rounded style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }} />
                 </Col>
               </Row>
               <Row>
                 <Col xs={6}>
-                  <Image
-                    src="./assets/img/13..jpg"
-                    alt="Education Support"
-                    fluid
-                    rounded
-                    style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }}
-                  />
+                  <Image src="./assets/img/13..jpg" alt="Education Support"
+                    fluid rounded style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }} />
                 </Col>
                 <Col xs={6}>
-                  <Image
-                    src="./assets/img/14.jpg"
-                    alt="Medical Aid"
-                    fluid
-                    rounded
-                    style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }}
-                  />
+                  <Image src="./assets/img/14.jpg" alt="Medical Aid"
+                    fluid rounded style={{ borderRadius: "15px", height: "200px", objectFit: "cover" }} />
                 </Col>
               </Row>
             </Col>
@@ -166,80 +130,54 @@ export default function About() {
         </Modal.Body>
       </Modal>
 
-      {/* ✅ Existing Pingalwada Section */}
+      {/* ✅ Keep only Pingalwada Section */}
       <PingalwadaSection />
 
-      {/* ✅ OUR PROJECTS SECTION */}
-      <Container className="py-5">
-        <h2 className="text-center text-white bg-primary py-2 mb-4 rounded">
-          OUR PROJECTS
-        </h2>
-        <Row>
-          {/* 🔹 Static Projects */}
-          {projects.map((project, idx) => (
-            <Col md={6} lg={3} key={idx} className="mb-4">
-              <Card className="h-100 shadow-sm">
-                <Card.Img
-                  variant="top"
-                  src={project.image}
-                  style={{ height: "200px", objectFit: "cover" }}
-                />
-                <Card.Body>
-                  <Card.Title className="text-primary">{project.title}</Card.Title>
-                  <Card.Text>{project.description}</Card.Text>
-                  <ul>
-                    {project.points.map((point, i) => (
-                      <li key={i}>{point}</li>
-                    ))}
-                  </ul>
-                  <div className="d-grid mt-3">
-                    <Button
-                      as={Link}
-                      to="/donate"
-                      state={{
-                        id: project.id || "unknown",
-                        name: project.title || "Untitled",
-                        location: project.location || "Not Specified",
-                        razorpayKey: project.razorpayKey, // ✅ now included
-                      }}
-                      variant="success"
-                    >
-                      Donate to {project.title}
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
+      {/* 💬 Floating Chatbot Button */}
+      <Button
+        variant="success"
+        className="position-fixed bottom-0 end-0 m-4 rounded-circle"
+        style={{ width: "60px", height: "60px" }}
+        onClick={() => setShowChat(true)}
+      >
+        💬
+      </Button>
 
-          {/* 🔹 Firestore Pingalwadas */}
-          {pingalwadas.map((pg) => (
-            <Col md={6} lg={3} key={pg.id} className="mb-4">
-              <Card className="h-100 shadow-sm">
-                <Card.Body>
-                  <Card.Title className="text-primary">{pg.name || "Unnamed Pingalwada"}</Card.Title>
-                  <Card.Text>{pg.description || "No description available."}</Card.Text>
-                  <div className="d-grid mt-3">
-                    <Button
-                      as={Link}
-                      to="/donate"
-                      state={{
-                        id: pg.id || "unknown",
-                        name: pg.name || "Pingalwada",
-                        location: pg.location || "Not Specified",
-                        razorpayKey: pg.razorpayKey || "rzp_test_QxxTkEz3TfW6qn", // ✅ safe fallback
-                      }}
-                      variant="success"
-                    >
-                      Donate to {pg.name || "Pingalwada"}
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </Col>
+      {/* Chatbot Modal */}
+      <Modal show={showChat} onHide={() => setShowChat(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Chat with Us</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: "400px", overflowY: "auto" }}>
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`mb-2 p-2 rounded ${
+                msg.sender === "user"
+                  ? "bg-primary text-white text-end"
+                  : "bg-light text-dark"
+              }`}
+            >
+              {msg.text}
+            </div>
           ))}
-        </Row>
-      </Container>
+        </Modal.Body>
+        <Modal.Footer className="d-flex gap-2">
+          <Form.Control
+            type="text"
+            value={input}
+            placeholder="Type a message..."
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+          <Button variant="secondary" onClick={handleVoiceInput}>
+            {listening ? "🎤 Listening..." : "🎙 Speak"}
+          </Button>
+          <Button variant="success" onClick={handleSend}>
+            Send
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

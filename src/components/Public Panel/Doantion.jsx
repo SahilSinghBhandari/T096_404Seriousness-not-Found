@@ -77,7 +77,7 @@ const Donation = () => {
     const user = auth.currentUser;
 
     const options = {
-      key: pingalwada?.razorpayKey || "rzp_test_RPCJgqrSFlu924", // ⚠️ replace with your Key ID
+      key: pingalwada?.razorpayKey || "rzp_test_RPAJRcGefWyJMU", // ⚠️ replace with your Key ID
       amount: Number(amount) * 100,
       currency: "INR",
       name: pingalwada?.name || "Pingalwada",
@@ -155,7 +155,7 @@ const Donation = () => {
       <Row className="justify-content-center text-center mb-4">
         <Col md={10}>
           <h1 className="fw-bold text-success">
-            💚 Donate to {pingalwada?.name || "AshaDeep"}
+            💚 Donate to {pingalwada?.name || "Pingalwara Care Foundation"}
           </h1>
           <p className="text-muted fs-5">
             Together we can bring hope, care, and dignity to those in need.

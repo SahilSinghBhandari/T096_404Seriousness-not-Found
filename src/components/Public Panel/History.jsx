@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Container, Table, Spinner, Alert, Button, Modal } from "react-bootstrap";
+import { Container, Table, Spinner, Alert, Button, Modal, Card, Image } from "react-bootstrap";
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
@@ -11,8 +11,7 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState("");
-  const [showCert, setShowCert] = useState(false);
-  const [showInvoice, setShowInvoice] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedTxn, setSelectedTxn] = useState(null);
 
   useEffect(() => {
@@ -22,13 +21,16 @@ export default function History() {
         setLoading(true);
 
         try {
+          // ✅ Fetch username
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           setUserName(userSnap.exists() ? userSnap.data().name : currentUser.displayName || "Donor");
 
+          // ✅ Fetch transactions
           const q1 = query(collection(db, "transactions"), where("userId", "==", currentUser.uid));
           const snap1 = await getDocs(q1);
 
+          // ✅ Fetch payments
           const q2 = query(collection(db, "payments"), where("userId", "==", currentUser.uid));
           const snap2 = await getDocs(q2);
 
@@ -37,9 +39,10 @@ export default function History() {
             ...doc.data(),
           }));
 
+          // ✅ Sort by date
           allData.sort((a, b) => {
-            const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.completedAt || 0);
-            const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.completedAt || 0);
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.completedAt || 0);
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.completedAt || 0);
             return dateB - dateA;
           });
 
@@ -59,7 +62,7 @@ export default function History() {
     return () => unsubscribe();
   }, []);
 
-  // ✅ PDF Generator
+  // ✅ PDF Download
   const downloadPDF = async (elementId, fileName, orientation = "portrait") => {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -99,8 +102,8 @@ export default function History() {
           </thead>
           <tbody>
             {transactions.map((txn) => {
-              const txnDate = txn.date?.toDate
-                ? txn.date.toDate().toLocaleDateString()
+              const txnDate = txn.createdAt?.toDate
+                ? txn.createdAt.toDate().toLocaleDateString()
                 : txn.completedAt
                 ? new Date(txn.completedAt).toLocaleDateString()
                 : "N/A";
@@ -109,20 +112,30 @@ export default function History() {
                 <tr key={txn.id}>
                   <td>{txnDate}</td>
                   <td>{txn.amount}</td>
-                  <td>{txn.message || "—"}</td>
-                  <td>{txn.usedFor || txn.pingalwadaName || "General Support"}</td>
+                  <td>{txn.donorMessage || "—"}</td>
+                  <td>{txn.pingalwadaName || "General Support"}</td>
                   <td className="d-flex gap-2">
                     <Button
                       variant="outline-primary"
                       size="sm"
-                      onClick={() => { setSelectedTxn(txn); setShowCert(true); }}
+                      onClick={() => {
+                        setSelectedTxn(txn);
+                        setShowModal(true);
+                      }}
+                    >
+                      View
+                    </Button>
+                    <Button
+                      variant="outline-success"
+                      size="sm"
+                      onClick={() => downloadPDF("cert-template", "certificate.pdf")}
                     >
                       Certificate
                     </Button>
                     <Button
                       variant="outline-dark"
                       size="sm"
-                      onClick={() => { setSelectedTxn(txn); setShowInvoice(true); }}
+                      onClick={() => downloadPDF("invoice-template", "invoice.pdf")}
                     >
                       Invoice
                     </Button>
@@ -134,52 +147,38 @@ export default function History() {
         </Table>
       )}
 
-      {/* 🎖 Certificate Modal */}
-      <Modal show={showCert} onHide={() => setShowCert(false)} size="lg" centered>
-        <Modal.Header closeButton><Modal.Title>Donation Certificate</Modal.Title></Modal.Header>
+      {/* 🔹 Modal for Viewing Donation Details */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Donation Details</Modal.Title>
+        </Modal.Header>
         <Modal.Body>
           {selectedTxn && (
-            <div id="certificate-content" className="p-4 text-center border">
-              <h3>🎖 Certificate of Appreciation</h3>
-              <p>This certificate is proudly presented to</p>
-              <h2>{userName}</h2>
-              <p>
-                for the generous donation of <strong>₹{selectedTxn.amount}</strong> <br />
-                towards <strong>{selectedTxn.pingalwadaName || "our cause"}</strong>.
-              </p>
-              <p>Date: {new Date(selectedTxn.completedAt || Date.now()).toLocaleDateString()}</p>
-              <p>💚 Thank you for your kindness!</p>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="success" onClick={() => downloadPDF("certificate-content", "Certificate.pdf")}>
-            📥 Download
-          </Button>
-        </Modal.Footer>
-      </Modal>
+            <Card className="shadow-sm text-center">
+              {/* 🔹 Show donor uploaded image OR fallback */}
+              <Image
+                src={
+                  selectedTxn.donorProfilePic && selectedTxn.donorProfilePic !== ""
+                    ? selectedTxn.donorProfilePic
+                    : "./assets/img/13..jpg" // put this fallback in public/assets/img
+                }
+                alt="Donation Proof"
+                fluid
+                rounded
+                className="mb-3"
+                style={{ maxHeight: "250px", objectFit: "contain" }}
+              />
 
-      {/* 🧾 Invoice Modal */}
-      <Modal show={showInvoice} onHide={() => setShowInvoice(false)} size="lg" centered>
-        <Modal.Header closeButton><Modal.Title>Donation Invoice</Modal.Title></Modal.Header>
-        <Modal.Body>
-          {selectedTxn && (
-            <div id="invoice-content" className="p-4 border">
-              <h3>🧾 Donation Invoice</h3>
-              <p><strong>Donor Name:</strong> {userName}</p>
-              <p><strong>Email:</strong> {user?.email}</p>
-              <p><strong>Amount:</strong> ₹{selectedTxn.amount}</p>
-              <p><strong>Donated For:</strong> {selectedTxn.pingalwadaName || "General Support"}</p>
-              <p><strong>Payment ID:</strong> {selectedTxn.paymentId || "N/A"}</p>
-              <p><strong>Date:</strong> {new Date(selectedTxn.completedAt || Date.now()).toLocaleString()}</p>
-            </div>
+              <Card.Body>
+                <h5 className="text-success">{selectedTxn.donorName}</h5>
+                <p><strong>Email:</strong> {selectedTxn.donorEmail}</p>
+                <p><strong>Amount:</strong> ₹{selectedTxn.amount}</p>
+                <p><strong>Message:</strong> {selectedTxn.donorMessage || "—"}</p>
+                <p><strong>Payment ID:</strong> {selectedTxn.paymentId}</p>
+              </Card.Body>
+            </Card>
           )}
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="dark" onClick={() => downloadPDF("invoice-content", "Invoice.pdf")}>
-            📥 Download
-          </Button>
-        </Modal.Footer>
       </Modal>
     </Container>
   );
