@@ -43,4 +43,5 @@ AI Chatbot: OpenAI API integration (with text & future voice support)
 
 Hosting: Firebase Hosting / Vercel
 
-Utilities: React-Toastify, Webcam Integration ,Cloudinary ,Dot Lotie React
+Utilities: React-Toastify, Webcam Integration ,Cloudinary ,Dot Lotie React , Framer-Motion
+
