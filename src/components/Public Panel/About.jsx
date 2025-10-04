@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Button, Card, Image, Modal } from "react-bootstrap";
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import PingalwadaSection from "./PingalwadaSection";
 
 export default function About() {
@@ -37,6 +37,7 @@ export default function About() {
         "At present there are over 1804 patients who are destitute and most of them are going to spend their entire life in Pingalwara.",
       points: ["8 Branches", "Old Age Home", "Play Room", "Sensory Room"],
       location: "Amritsar",
+      razorpayKey: "rzp_test_RP9VlGnNBImdLC", // ✅ added fallback key
     },
     {
       id: "education",
@@ -46,6 +47,7 @@ export default function About() {
         "Pingalwara provides education to 775 poor and needy slum-dwelling children from nearby villages.",
       points: ["Free Education", "Free Books & Uniform", "Free Transport", "100% Result"],
       location: "Amritsar",
+      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
     },
     {
       id: "medical",
@@ -55,6 +57,7 @@ export default function About() {
         "A medical laboratory and dispensary has been established for the treatment of patients.",
       points: ["Dispensary & Lab", "Dental Clinic", "Operation Theatre", "Homeopathy"],
       location: "Amritsar",
+      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
     },
     {
       id: "printing",
@@ -64,6 +67,7 @@ export default function About() {
         "Puran Printing Press provides free literature regarding Religion, Social Issues, Economics, Heritage & Health.",
       points: ["50,000 pages/day", "80 Books Annually", "Expenditure: Rs. 3.80 crore"],
       location: "Amritsar",
+      razorpayKey: "rzp_test_RP9VlGnNBImdLC",
     },
   ];
 
@@ -196,6 +200,7 @@ export default function About() {
                         id: project.id || "unknown",
                         name: project.title || "Untitled",
                         location: project.location || "Not Specified",
+                        razorpayKey: project.razorpayKey, // ✅ now included
                       }}
                       variant="success"
                     >
@@ -222,7 +227,7 @@ export default function About() {
                         id: pg.id || "unknown",
                         name: pg.name || "Pingalwada",
                         location: pg.location || "Not Specified",
-                        razorpayKey: pg.razorpayKey || "rzp_test_RP9VlGnNBImdLC" // ✅ safe fallback
+                        razorpayKey: pg.razorpayKey || "rzp_test_QxxTkEz3TfW6qn", // ✅ safe fallback
                       }}
                       variant="success"
                     >

@@ -22,26 +22,21 @@ export default function History() {
         setLoading(true);
 
         try {
-          // ✅ fetch username
           const userRef = doc(db, "users", currentUser.uid);
           const userSnap = await getDoc(userRef);
           setUserName(userSnap.exists() ? userSnap.data().name : currentUser.displayName || "Donor");
 
-          // ✅ fetch transactions
           const q1 = query(collection(db, "transactions"), where("userId", "==", currentUser.uid));
           const snap1 = await getDocs(q1);
 
-          // ✅ fetch payments too
           const q2 = query(collection(db, "payments"), where("userId", "==", currentUser.uid));
           const snap2 = await getDocs(q2);
 
-          // ✅ merge both
           const allData = [...snap1.docs, ...snap2.docs].map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
 
-          // ✅ sort by date
           allData.sort((a, b) => {
             const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.completedAt || 0);
             const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.completedAt || 0);
@@ -64,7 +59,7 @@ export default function History() {
     return () => unsubscribe();
   }, []);
 
-  // ✅ PDF Download Functions
+  // ✅ PDF Generator
   const downloadPDF = async (elementId, fileName, orientation = "portrait") => {
     const element = document.getElementById(elementId);
     if (!element) return;
@@ -117,10 +112,18 @@ export default function History() {
                   <td>{txn.message || "—"}</td>
                   <td>{txn.usedFor || txn.pingalwadaName || "General Support"}</td>
                   <td className="d-flex gap-2">
-                    <Button variant="outline-primary" size="sm" onClick={() => { setSelectedTxn(txn); setShowCert(true); }}>
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => { setSelectedTxn(txn); setShowCert(true); }}
+                    >
                       Certificate
                     </Button>
-                    <Button variant="outline-dark" size="sm" onClick={() => { setSelectedTxn(txn); setShowInvoice(true); }}>
+                    <Button
+                      variant="outline-dark"
+                      size="sm"
+                      onClick={() => { setSelectedTxn(txn); setShowInvoice(true); }}
+                    >
                       Invoice
                     </Button>
                   </td>
@@ -132,10 +135,52 @@ export default function History() {
       )}
 
       {/* 🎖 Certificate Modal */}
-      {/* (same as your existing certificate code) */}
+      <Modal show={showCert} onHide={() => setShowCert(false)} size="lg" centered>
+        <Modal.Header closeButton><Modal.Title>Donation Certificate</Modal.Title></Modal.Header>
+        <Modal.Body>
+          {selectedTxn && (
+            <div id="certificate-content" className="p-4 text-center border">
+              <h3>🎖 Certificate of Appreciation</h3>
+              <p>This certificate is proudly presented to</p>
+              <h2>{userName}</h2>
+              <p>
+                for the generous donation of <strong>₹{selectedTxn.amount}</strong> <br />
+                towards <strong>{selectedTxn.pingalwadaName || "our cause"}</strong>.
+              </p>
+              <p>Date: {new Date(selectedTxn.completedAt || Date.now()).toLocaleDateString()}</p>
+              <p>💚 Thank you for your kindness!</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="success" onClick={() => downloadPDF("certificate-content", "Certificate.pdf")}>
+            📥 Download
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* 🧾 Invoice Modal */}
-      {/* (same as your existing invoice code) */}
+      <Modal show={showInvoice} onHide={() => setShowInvoice(false)} size="lg" centered>
+        <Modal.Header closeButton><Modal.Title>Donation Invoice</Modal.Title></Modal.Header>
+        <Modal.Body>
+          {selectedTxn && (
+            <div id="invoice-content" className="p-4 border">
+              <h3>🧾 Donation Invoice</h3>
+              <p><strong>Donor Name:</strong> {userName}</p>
+              <p><strong>Email:</strong> {user?.email}</p>
+              <p><strong>Amount:</strong> ₹{selectedTxn.amount}</p>
+              <p><strong>Donated For:</strong> {selectedTxn.pingalwadaName || "General Support"}</p>
+              <p><strong>Payment ID:</strong> {selectedTxn.paymentId || "N/A"}</p>
+              <p><strong>Date:</strong> {new Date(selectedTxn.completedAt || Date.now()).toLocaleString()}</p>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="dark" onClick={() => downloadPDF("invoice-content", "Invoice.pdf")}>
+            📥 Download
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 }
