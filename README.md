@@ -1,5 +1,10 @@
 Team Name: 404 Seriousness Not Found 
 Team ID : T096(Open Inovation)
+Team Members : Sahil Singh Bhandari(Backend)
+               Pratham Bhardwaj(Backend)
+               Parampreet Singh(UI & UX)
+               Tajjanya (UI & UX)
+               Manpreet Singh (Presenttion)
 Pingalwara is a digital platform built to support social welfare initiatives, making it easier to manage donations, volunteers, chatbot assistance, and support programs (Food, Medical, Education, etc.). It ensures transparency, efficient operations, and community engagement through a modern digital interface.
 
 ✨ Features
