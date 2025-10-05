@@ -13,7 +13,7 @@ export default function Footer() {
   return (
     <footer
       style={{
-        background: "linear-gradient(90deg, #1e3c72, #2a5298)", // matches your sidebar
+        background: "linear-gradient(90deg, #1e3c72, #2a5298)",
         color: "white",
         padding: "40px 0 20px",
         marginTop: "40px",
