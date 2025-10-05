@@ -77,7 +77,7 @@ const Donation = () => {
     const user = auth.currentUser;
 
     const options = {
-      key: pingalwada?.razorpayKey || "rzp_test_RPAJRcGefWyJMU", // ⚠️ replace with your Key ID
+      key: pingalwada?.razorpayKey || "rzp_test_RPAJRcGefWyJMU", 
       amount: Number(amount) * 100,
       currency: "INR",
       name: pingalwada?.name || "Pingalwada",
