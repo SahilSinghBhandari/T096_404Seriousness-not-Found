@@ -18,7 +18,7 @@ const Donation = () => {
 
   const nav = useNavigate();
   const location = useLocation();
-  const pingalwada = location.state; // ✅ Should contain { id, name, location }
+  const pingalwada = location.state;
   const storage = getStorage();
 
   const resetForm = () => {
