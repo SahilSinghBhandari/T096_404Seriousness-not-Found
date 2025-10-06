@@ -58,7 +58,7 @@ const Volunteer = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ Handle checkbox
+
   const handleCheckbox = (e) => {
     const { value, checked } = e.target;
     let updatedInterests = [...formData.interests];
@@ -70,7 +70,7 @@ const Volunteer = () => {
     setFormData({ ...formData, interests: updatedInterests });
   };
 
-  // ✅ Submit volunteer form
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
