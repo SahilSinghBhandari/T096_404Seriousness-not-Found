@@ -31,9 +31,9 @@ export default function PingalwadaSection() {
     if (!pg) return;
 
     if (type === "donate") {
-      navigate("/donate", { state: pg });   // ✅ go to Donation page
+      navigate("/donate", { state: pg });
     } else if (type === "volunteer") {
-      navigate("/volunteer", { state: pg }); // ✅ go to Volunteer page
+      navigate("/volunteer", { state: pg }); 
     }
   };
 
