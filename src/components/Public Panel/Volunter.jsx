@@ -35,14 +35,13 @@ const Volunteer = () => {
     interests: [],
   });
 
-  // ✅ Capture photo from webcam
+
   const capture = () => {
     const imageSrc = webcamRef.current.getScreenshot();
     setImage(imageSrc);
     setShowCamera(false);
   };
 
-  // ✅ Upload from gallery
   const handleGallery = (e) => {
     const file = e.target.files[0];
     if (file) {
