@@ -142,7 +142,7 @@ const Volunteer = () => {
       console.error("Error saving volunteer:", error);
       toast.error("❌ Something went wrong, please try again.");
     } finally {
-      setLoading(false); // ✅ Always reset loader
+      setLoading(false);
     }
   };
 
