@@ -39,7 +39,7 @@ export default function About() {
     setInput("");
   };
 
-  // ✅ Voice Input using Web Speech API
+
   const handleVoiceInput = () => {
     if (!("webkitSpeechRecognition" in window)) {
       alert("Your browser does not support speech recognition 😢");
