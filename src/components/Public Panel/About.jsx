@@ -22,7 +22,7 @@ export default function About() {
     "how to volunteer": "You can register as a volunteer on our Volunteer page 🙌",
   };
 
-  // ✅ Handle message send
+  
   const handleSend = () => {
     if (!input.trim()) return;
 
