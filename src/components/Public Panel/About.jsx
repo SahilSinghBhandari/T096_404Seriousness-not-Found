@@ -5,7 +5,7 @@ import PingalwadaSection from "./PingalwadaSection";
 export default function About() {
   const [showVideo, setShowVideo] = useState(false);
 
-  // ✅ Chatbot states
+  
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([
     { sender: "bot", text: "Hello! 👋 How can I help you today?" }
