@@ -95,7 +95,7 @@ const Volunteer = () => {
       const volunteerRef = await addDoc(collection(db, "volunteers"), {
         ...formData,
         imageUrl: "",
-        status: "pending", // Admin can later approve/reject
+        status: "pending",
         createdAt: serverTimestamp(),
       });
 
